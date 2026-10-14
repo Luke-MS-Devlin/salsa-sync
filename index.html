@@ -22,6 +22,8 @@
     .mirror { transform:scaleX(-1); }
     .count { position:absolute; top:10px; right:14px; font-size:3.2rem; font-weight:800; color:#fff; text-shadow:0 2px 8px #000; }
     .count.big { color:var(--right); }
+    .phase { position:absolute; top:72px; right:14px; font-size:1.3rem; font-weight:700; color:#fff; text-shadow:0 2px 8px #000; text-align:right; }
+    .phase.cue { color:var(--ok); font-size:1.7rem; }
     #status { margin:10px 0 6px; font-weight:600; }
     canvas.chart { height:150px; background:var(--panel); border-radius:8px; display:block; }
     #live { width:100%; }
@@ -34,7 +36,8 @@
 <main>
   <h1>Salsa Sync</h1>
   <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
-     then start a session and dance your basic step to the rhythm. The first four beats are a count-in (5, 6, 7, 8); start on the 1.</p>
+     then start a session. You get 5 seconds to get into position, a count-in (5, 6, 7, 8) and two practice basics.
+     When the screen says "Real thing from the 1!", recording starts on the next 1.</p>
 
   <div class="controls">
     <button id="cameraBtn" class="primary">Start camera</button>
@@ -57,6 +60,7 @@
     <video id="video" playsinline muted></video>
     <canvas id="overlay"></canvas>
     <div id="count" class="count"></div>
+    <div id="phase" class="phase"></div>
   </div>
 
   <div id="status">Press Start camera to begin.</div>
@@ -85,12 +89,14 @@
   const SAVED_POINTS = [23, 24, 25, 26, ...FOOT_POINTS];   // hips and knees too, in case weight shift is easier to read
   const LIVE_WINDOW_MS = 5000;
   const COUNT_IN = 4;                                      // count-in beats before the 1
+  const PRACTICE_BASICS = 2;                               // warm-up basics before recording starts
+  const PRACTICE_BEATS = PRACTICE_BASICS * 8;              // one basic = one 8-count
   const GET_READY_SEC = 5;                                 // time to walk back into frame before the count-in
 
   const $ = id => document.getElementById(id);
   const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
   const live = $("live"), lctx = live.getContext("2d");
-  const statusEl = $("status"), countEl = $("count");
+  const statusEl = $("status"), countEl = $("count"), phaseEl = $("phase");
   const cameraBtn = $("cameraBtn"), camSel = $("camera"), sessionBtn = $("sessionBtn");
   const draw = new DrawingUtils(ctx);
 
@@ -255,6 +261,7 @@
                                    tone(t, { freq: 845, type: "square", gain: accent ? 0.10 : 0.05, decay: 0.12 }); };
   const clave   = t => tone(t, { freq: 2500, gain: 0.5, decay: 0.05 });
   const conga   = t => tone(t, { freq: 240, endFreq: 170, gain: 0.7, decay: 0.25 });
+  const whoop   = t => tone(t, { freq: 500, endFreq: 1400, gain: 0.35, decay: 0.35 });   // "get ready" cue before the real thing
 
   // Son clave (2-3) and conga open tones, as beat positions within an 8-count (0 = the "1").
   const CLAVE_23 = [1, 2, 4, 5.5, 7];
@@ -279,13 +286,14 @@
 
     const bpm = Number($("bpm").value), seconds = Number($("dur").value);
     const beatSec = 60 / bpm;
-    const nBeats = COUNT_IN + Math.round(seconds / beatSec);
+    const nBeats = COUNT_IN + PRACTICE_BEATS + Math.round(seconds / beatSec);
     const start = audioCtx.currentTime + GET_READY_SEC;
 
     const audioBeats = [];
     for (let k = 0; k < nBeats; k++) {
       const t = start + k * beatSec;
       const inCount = k < COUNT_IN;
+      const practice = !inCount && k < COUNT_IN + PRACTICE_BEATS;
       const pos = (k - COUNT_IN + 8 * 100) % 8;           // 0..7 within the 8-count
       const count = inCount ? 5 + k : pos + 1;            // count-in shows 5,6,7,8
       cowbell(t, count === 1 || count === 5);
@@ -293,39 +301,47 @@
         for (const c of CLAVE_23) if (Math.floor(c) === pos) clave(t + (c - pos) * beatSec);
         if (CONGA.includes(pos)) conga(t);
       }
-      audioBeats.push({ audio: t, count, countIn: inCount });
+      if (k === COUNT_IN + PRACTICE_BEATS - 4) whoop(t);   // on the 5 of the last practice basic
+      audioBeats.push({ audio: t, count, countIn: inCount, practice });
     }
 
     sessionBtn.disabled = true; sessionBtn.textContent = "Recording…";
     // Map beat times onto the camera clock once audio is flowing.
     await new Promise(r => setTimeout(r, 1000));
-    const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn }));
+    const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice }));
+    const firstReal = beats[COUNT_IN + PRACTICE_BEATS];
     session = {
       bpm, beats, frames: [],
-      startPerf: beats[0].t - 200,
+      startPerf: firstReal.t - 200,                        // only the real part is recorded
       endPerf: beats[beats.length - 1].t + beatSec * 1000,
       userAgent: navigator.userAgent,
       outputLatency: audioCtx.outputLatency ?? null,
       beatClock,
     };
-    statusEl.textContent = `Get into position. After the count-in, dance your basic from the 1 (${bpm} BPM)`;
+    statusEl.textContent = `Get into position. Count-in, ${PRACTICE_BASICS} practice basics, then the real thing (${bpm} BPM)`;
     sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
 
   function updateCount(now) {
-    if (!session) { countEl.textContent = ""; return; }
-    let current = null;
-    for (const b of session.beats) { if (b.t <= now) current = b; else break; }
+    if (!session) { countEl.textContent = phaseEl.textContent = ""; return; }
+    let current = null, i = -1;
+    for (const b of session.beats) { if (b.t <= now) { current = b; i++; } else break; }
     countEl.textContent = current ? current.count : "";
     countEl.classList.toggle("big", !!current && (current.count === 1 || current.count === 5) && !current.countIn);
+
+    // Phase label under the count: get ready → count-in → practice → cue → recording
+    const cue = current && current.practice && i >= COUNT_IN + PRACTICE_BEATS - 4;
+    phaseEl.textContent = !current ? "Get ready" : current.countIn ? "Count-in" : cue ? "Real thing from the 1!"
+                        : current.practice ? `Practice ${Math.floor((i - COUNT_IN) / 8) + 1} of ${PRACTICE_BASICS}` : "Recording";
+    phaseEl.classList.toggle("cue", !!cue);
   }
 
   // Stopping early ends the session now and keeps what was recorded so far.
   // (There's no pause/resume: the beats are scheduled in advance, so a fresh session is simpler.)
   function stopSession() {
     clearTimeout(endTimer);
-    if (session.beats[0].t > performance.now()) {   // stopped before the count-in began: nothing to keep
+    if (performance.now() < session.startPerf) {   // stopped before the real part began: nothing to keep
       session = null; master.disconnect(); wakeLock?.release?.(); wakeLock = null;
       sessionBtn.textContent = "Start session"; statusEl.textContent = "Session cancelled.";
       return;
@@ -341,13 +357,13 @@
     s.frameClock = frameClock;
     master.disconnect();
     wakeLock?.release?.(); wakeLock = null;
-    countEl.textContent = "";
+    countEl.textContent = phaseEl.textContent = "";
     sessionBtn.disabled = false; sessionBtn.textContent = "Start session";
 
     const secs = (s.endPerf - s.startPerf) / 1000;
     const visible = s.frames.filter(f => FOOT_POINTS.every(i => f.pts[i][2] > 0.5)).length;
     $("summary").textContent =
-      `${s.bpm} BPM · ${s.beats.filter(b => !b.countIn).length} beats · ${s.frames.length} frames ` +
+      `${s.bpm} BPM · ${s.beats.filter(b => !b.countIn && !b.practice).length} beats · ${s.frames.length} frames ` +
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
     $("results").hidden = false;
     drawSession(s);
