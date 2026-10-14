@@ -33,14 +33,19 @@
     .legend { font-size:.85rem; color:var(--muted); margin-top:6px; }
     .legend b.l { color:var(--left); } .legend b.r { color:var(--right); }
     .feedback { color:var(--fg); font-size:1.05rem; }
+    .feet { position:absolute; top:10px; left:14px; display:flex; gap:8px; }
+    .feet[hidden] { display:none; }
+    .feet span { font-size:1.3rem; font-weight:800; padding:6px 12px; border-radius:8px; background:#000a; color:#fff; transition:background .4s; }
+    .feet span.hit { transition:none; }
+    .feet span.l.hit { background:var(--left); } .feet span.r.hit { background:var(--right); }
   </style>
 </head>
 <body>
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score -->
-  <h1>Salsa Sync <small id="version">v2.6</small></h1>
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check -->
+  <h1>Salsa Sync <small id="version">v2.7</small></h1>
   <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
      then start a session. You get 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
      A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.</p>
@@ -61,17 +66,22 @@
     </label>
     <button id="sessionBtn" disabled>Start session</button>
   </div>
+  <div class="controls">
+    <button id="checkBtn" disabled>Step check</button>
+    <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04"> <span id="liftVal">4%</span> of leg</label>
+  </div>
 
   <div class="stage">
     <video id="video" playsinline muted></video>
     <canvas id="overlay"></canvas>
     <div id="count" class="count"></div>
     <div id="phase" class="phase"></div>
+    <div id="feet" class="feet" hidden><span class="l">L 0</span><span class="r">R 0</span></div>
   </div>
 
   <div id="status">Press Start camera to begin.</div>
   <canvas id="live" class="chart"></canvas>
-  <div class="legend">Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.</div>
+  <div id="liveLegend" class="legend">Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.</div>
 
   <section id="results" hidden>
     <h2>Last session</h2>
@@ -107,7 +117,7 @@
   const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
   const live = $("live"), lctx = live.getContext("2d");
   const statusEl = $("status"), countEl = $("count"), phaseEl = $("phase");
-  const cameraBtn = $("cameraBtn"), camSel = $("camera"), sessionBtn = $("sessionBtn");
+  const cameraBtn = $("cameraBtn"), camSel = $("camera"), sessionBtn = $("sessionBtn"), checkBtn = $("checkBtn");
   const draw = new DrawingUtils(ctx);
 
   let landmarker = null, stream = null, running = false;
@@ -204,7 +214,8 @@
 
     liveHistory.push({ t, left: 1 - lm[L_ANKLE].y, right: 1 - lm[R_ANKLE].y });
     while (liveHistory.length && t - liveHistory[0].t > LIVE_WINDOW_MS) liveHistory.shift();
-    if (!session) drawLive(t);   // skip live chart while recording to keep the frame rate up
+    if (checking) checkFrame(lm, t);
+    else if (!session) drawLive(t);   // skip live chart while recording to keep the frame rate up
   }
 
   const round = (v, dp = 4) => Math.round(v * 10 ** dp) / 10 ** dp;
@@ -212,7 +223,8 @@
   // ---------- Step detection ----------
   // Turns ankle movement into foot-landing times, then compares each landing with its nearest beat.
   // Tuned on a marching test: 78 of 80 steps found, landings within ±50 ms of the beat 71% of the time.
-  const MIN_LIFT = 0.04;        // a lift must rise at least this many leg-lengths off the floor
+  const MIN_LIFT = 0.04;        // a lift must rise at least this many leg-lengths off the floor (default)
+  let minLift = MIN_LIFT;       // set by the "Lift needed" slider, used by both step check and sessions
   const FLOOR_WINDOW = 750;     // ms either side used to find where the foot rests on the floor
   const ON_TIME_MS = 50;        // a landing within this many ms of the beat counts as on time
 
@@ -232,9 +244,9 @@
         for (let j = 0; j < t.length; j++) if (Math.abs(t[j] - t[i]) < FLOOR_WINDOW) floor = Math.min(floor, height[j]);
         return h - floor;
       });
-      // 3. Each peak higher than MIN_LIFT is a lift. 4. It lands when it gets back down to half the peak height.
+      // 3. Each peak higher than minLift is a lift. 4. It lands when it gets back down to half the peak height.
       for (let i = 1; i < t.length - 1; i++) {
-        if (lift[i] < MIN_LIFT || lift[i] < lift[i - 1] || lift[i] < lift[i + 1]) continue;
+        if (lift[i] < minLift || lift[i] < lift[i - 1] || lift[i] < lift[i + 1]) continue;
         const half = lift[i] / 2;
         let j = i;
         while (j < t.length - 1 && lift[j] > half) j++;
@@ -437,7 +449,7 @@
       audioBeats.push({ audio: t, count, countIn: inCount, practice, cue });
     }
 
-    sessionBtn.disabled = true; sessionBtn.textContent = "Recording…";
+    sessionBtn.disabled = true; sessionBtn.textContent = "Recording…"; checkBtn.disabled = true;
     // Map beat times onto the camera clock once audio is flowing.
     await new Promise(r => setTimeout(r, 1000));
     const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice, cue: b.cue }));
@@ -447,6 +459,7 @@
       startPerf: firstReal.t - 200,                        // only the real part is recorded
       endPerf: beats[beats.length - 1].t + beatSec * 1000,
       appVersion: APP_VERSION,
+      minLift,
       userAgent: navigator.userAgent,
       outputLatency: audioCtx.outputLatency ?? null,
       beatClock,
@@ -477,7 +490,7 @@
     clearTimeout(endTimer);
     if (performance.now() < session.startPerf) {   // stopped before the real part began: nothing to keep
       session = null; master.disconnect(); wakeLock?.release?.(); wakeLock = null;
-      sessionBtn.textContent = "Start session"; statusEl.textContent = "Session cancelled.";
+      sessionBtn.textContent = "Start session"; checkBtn.disabled = false; statusEl.textContent = "Session cancelled.";
       return;
     }
     session.endPerf = Math.min(session.endPerf, performance.now());
@@ -492,7 +505,7 @@
     master.disconnect();
     wakeLock?.release?.(); wakeLock = null;
     countEl.textContent = phaseEl.textContent = "";
-    sessionBtn.disabled = false; sessionBtn.textContent = "Start session";
+    sessionBtn.disabled = false; sessionBtn.textContent = "Start session"; checkBtn.disabled = false;
 
     const nBeats = s.beats.filter(b => !b.countIn && !b.practice).length;
     s.steps = detectSteps(s);
@@ -525,14 +538,97 @@
 
   function stopCamera() {
     if (session) stopSession();
+    if (checking) stopCheck();
     running = false; cancelNextFrame();
     stream?.getTracks().forEach(t => t.stop()); stream = null;
     video.srcObject = null;
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     liveHistory.length = 0;
-    cameraBtn.textContent = "Start camera"; sessionBtn.disabled = true;
+    cameraBtn.textContent = "Start camera"; sessionBtn.disabled = checkBtn.disabled = true;
     statusEl.textContent = "Camera stopped.";
   }
+
+  // ---------- Step check (live) ----------
+  // The same rules as detectSteps, run frame by frame so you see each step as it happens:
+  // a foot is "up" once it rises minLift above its floor, and it has landed when it drops back to half its peak.
+  // Differences from the session version: the floor and leg length only use the past (we can't see the future live),
+  // and a landing is only known once the foot is half way down, so the flash comes a moment after the step.
+  let checking = false;
+  const checkHistory = [];
+  const feet = {};
+  const resetFoot = () => ({ leg: 0, recent: [], up: false, peak: 0, count: 0 });
+
+  function startCheck() {
+    if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
+    audioCtx.resume();
+    master = audioCtx.createGain(); master.connect(audioCtx.destination);
+    feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0;
+    checking = true;
+    $("feet").hidden = false; updateFeet();
+    checkBtn.textContent = "Stop step check"; sessionBtn.disabled = true;
+    $("liveLegend").innerHTML = `Live lift off the floor (last 5 s): <b class="l">left</b> and <b class="r">right</b>.
+      The dashed line is the lift needed to count as a step. Each landing flashes L or R and beeps.`;
+  }
+
+  function stopCheck() {
+    checking = false; master.disconnect();
+    $("feet").hidden = true;
+    checkBtn.textContent = "Step check"; sessionBtn.disabled = !running;
+    $("liveLegend").innerHTML = `Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.`;
+  }
+
+  function checkFrame(lm, t) {
+    const row = { t };
+    for (const [foot, hip, ankle] of [["left", 23, 27], ["right", 24, 28]]) {
+      const f = feet[foot];
+      // 1. Ankle height in leg-lengths (leg length smoothed over recent frames).
+      const leg = Math.hypot(lm[hip].x - lm[ankle].x, lm[hip].y - lm[ankle].y);
+      f.leg = f.leg ? 0.95 * f.leg + 0.05 * leg : leg;
+      const height = (1 - lm[ankle].y) / f.leg;
+      // 2. Floor = lowest height in the last 1.5 s.
+      f.recent.push({ t, height });
+      while (t - f.recent[0].t > 2 * FLOOR_WINDOW) f.recent.shift();
+      const lift = height - Math.min(...f.recent.map(r => r.height));
+      // 3. Up once the lift passes minLift. 4. Landed once it falls back to half the highest point.
+      if (!f.up && lift >= minLift) { f.up = true; f.peak = lift; }
+      else if (f.up) {
+        f.peak = Math.max(f.peak, lift);
+        if (lift <= f.peak / 2) { f.up = false; f.count++; landed(foot); }
+      }
+      row[foot] = lift;
+    }
+    checkHistory.push(row);
+    while (t - checkHistory[0].t > LIVE_WINDOW_MS) checkHistory.shift();
+    drawCheck(t);
+  }
+
+  function landed(foot) {
+    updateFeet();
+    const el = $("feet").querySelector(foot === "left" ? ".l" : ".r");
+    el.classList.add("hit"); setTimeout(() => el.classList.remove("hit"), 150);
+    tone(audioCtx.currentTime, { freq: foot === "left" ? 520 : 780, type: "triangle", gain: 0.4, decay: 0.08 });
+  }
+
+  function updateFeet() {
+    const [l, r] = $("feet").children;
+    l.textContent = `L ${feet.left.count}`; r.textContent = `R ${feet.right.count}`;
+  }
+
+  function drawCheck(now) {
+    const w = live.clientWidth, h = live.clientHeight;
+    const g = sizeCanvas(live, w, h);
+    const top = Math.max(0.15, 2 * minLift);          // fixed scale, so the threshold line doesn't jump around
+    const y = v => h - (v / top) * h;
+    g.setLineDash([6, 4]); g.beginPath(); g.moveTo(0, y(minLift)); g.lineTo(w, y(minLift));
+    g.strokeStyle = "#aaa"; g.lineWidth = 1; g.stroke(); g.setLineDash([]);
+    if (checkHistory.length > 1) plotLines(g, checkHistory, t => w - ((now - t) / LIVE_WINDOW_MS) * w, y);
+  }
+
+  $("lift").addEventListener("input", e => {
+    minLift = Number(e.target.value);
+    $("liftVal").textContent = `${(minLift * 100).toFixed(1).replace(/\.0$/, "")}%`;
+  });
+  checkBtn.addEventListener("click", () => checking ? stopCheck() : startCheck());
 
   // ---------- Buttons ----------
   cameraBtn.addEventListener("click", async () => {
@@ -541,7 +637,7 @@
       cameraBtn.disabled = true;
       if (!landmarker) await loadModel();
       await startCamera();
-      running = true; cameraBtn.textContent = "Stop camera"; sessionBtn.disabled = false;
+      running = true; cameraBtn.textContent = "Stop camera"; sessionBtn.disabled = checkBtn.disabled = false;
       cameraBtn.disabled = false;
       scheduleNextFrame();
     } catch (err) {
