@@ -38,7 +38,7 @@
 
   <div class="controls">
     <button id="cameraBtn" class="primary">Start camera</button>
-    <select id="camera" aria-label="Camera">
+    <select id="camera" aria-label="Camera" hidden>
       <option value="environment">Back camera</option>
       <option value="user">Front camera</option>
     </select>
@@ -122,16 +122,28 @@
     video.srcObject = stream;
     await video.play();
     overlay.width = video.videoWidth; overlay.height = video.videoHeight;
+
+    // Only show the front/back picker on devices with more than one camera (phones).
+    // A laptop usually has one webcam, which faces you, so treat it as a front camera.
+    // (Camera names are only available after permission is granted, so we check here.)
+    const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
+    camSel.hidden = cameras.length < 2;
+    if (camSel.hidden) camSel.value = "user";
     const mirror = camSel.value === "user";
     video.classList.toggle("mirror", mirror); overlay.classList.toggle("mirror", mirror);
   }
 
   // Process each new camera frame. requestVideoFrameCallback tells us when the
   // camera actually captured the frame, which is more accurate than "now".
+  let frameRequest = null;
   function scheduleNextFrame() {
     if (!running) return;
-    if ("requestVideoFrameCallback" in video) video.requestVideoFrameCallback(onFrame);
-    else requestAnimationFrame(now => onFrame(now, null));
+    if ("requestVideoFrameCallback" in video) frameRequest = video.requestVideoFrameCallback(onFrame);
+    else frameRequest = requestAnimationFrame(now => onFrame(now, null));
+  }
+  function cancelNextFrame() {   // so stopping and restarting the camera doesn't leave two frame loops running
+    if ("requestVideoFrameCallback" in video) video.cancelVideoFrameCallback(frameRequest);
+    else cancelAnimationFrame(frameRequest);
   }
 
   let lastMpTs = 0;
@@ -257,7 +269,7 @@
   }
 
   // ---------- Session ----------
-  let wakeLock = null;
+  let wakeLock = null, endTimer = null;
 
   async function startSession() {
     if (!audioCtx) { audioCtx = new AudioContext({ latencyHint: "interactive" }); }
@@ -297,7 +309,8 @@
       beatClock,
     };
     statusEl.textContent = `Get into position. After the count-in, dance your basic from the 1 (${bpm} BPM)`;
-    setTimeout(endSession, session.endPerf - performance.now() + 300);
+    sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
+    endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
 
   function updateCount(now) {
@@ -306,6 +319,21 @@
     for (const b of session.beats) { if (b.t <= now) current = b; else break; }
     countEl.textContent = current ? current.count : "";
     countEl.classList.toggle("big", !!current && (current.count === 1 || current.count === 5) && !current.countIn);
+  }
+
+  // Stopping early ends the session now and keeps what was recorded so far.
+  // (There's no pause/resume: the beats are scheduled in advance, so a fresh session is simpler.)
+  function stopSession() {
+    clearTimeout(endTimer);
+    if (session.beats[0].t > performance.now()) {   // stopped before the count-in began: nothing to keep
+      session = null; master.disconnect(); wakeLock?.release?.(); wakeLock = null;
+      sessionBtn.textContent = "Start session"; statusEl.textContent = "Session cancelled.";
+      return;
+    }
+    session.endPerf = Math.min(session.endPerf, performance.now());
+    session.beats = session.beats.filter(b => b.t <= session.endPerf);
+    session.stoppedEarly = true;
+    endSession();
   }
 
   function endSession() {
@@ -336,13 +364,26 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   });
 
+  function stopCamera() {
+    if (session) stopSession();
+    running = false; cancelNextFrame();
+    stream?.getTracks().forEach(t => t.stop()); stream = null;
+    video.srcObject = null;
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    liveHistory.length = 0;
+    cameraBtn.textContent = "Start camera"; sessionBtn.disabled = true;
+    statusEl.textContent = "Camera stopped.";
+  }
+
   // ---------- Buttons ----------
   cameraBtn.addEventListener("click", async () => {
+    if (running) { stopCamera(); return; }
     try {
       cameraBtn.disabled = true;
       if (!landmarker) await loadModel();
       await startCamera();
-      running = true; cameraBtn.textContent = "Camera on"; sessionBtn.disabled = false;
+      running = true; cameraBtn.textContent = "Stop camera"; sessionBtn.disabled = false;
+      cameraBtn.disabled = false;
       scheduleNextFrame();
     } catch (err) {
       statusEl.textContent = "Couldn't start: " + err.message;
@@ -355,7 +396,7 @@
     try { await startCamera(); liveHistory.length = 0; } catch (err) { statusEl.textContent = "Camera error: " + err.message; }
   });
 
-  sessionBtn.addEventListener("click", () => startSession().catch(err => {
+  sessionBtn.addEventListener("click", () => session ? stopSession() : startSession().catch(err => {
     statusEl.textContent = "Session error: " + err.message; session = null;
     sessionBtn.disabled = false; sessionBtn.textContent = "Start session";
   }));
