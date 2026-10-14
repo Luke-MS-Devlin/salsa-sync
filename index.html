@@ -85,6 +85,7 @@
   const SAVED_POINTS = [23, 24, 25, 26, ...FOOT_POINTS];   // hips and knees too, in case weight shift is easier to read
   const LIVE_WINDOW_MS = 5000;
   const COUNT_IN = 4;                                      // count-in beats before the 1
+  const GET_READY_SEC = 5;                                 // time to walk back into frame before the count-in
 
   const $ = id => document.getElementById(id);
   const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
@@ -95,6 +96,7 @@
 
   let landmarker = null, stream = null, running = false;
   let fps = 0, lastFrameAt = 0;
+  let frameClock = "unknown", beatClock = "unknown";      // which timing source was actually used (saved in the JSON)
   const liveHistory = [];
 
   // Session state
@@ -136,6 +138,7 @@
   function onFrame(now, meta) {
     if (!running) return;
     const captured = (meta && meta.captureTime) ? meta.captureTime : now;
+    frameClock = (meta && meta.captureTime) ? "captureTime" : (meta ? "videoFrameCallback" : "animationFrame");
     const mpTs = Math.max(now, lastMpTs + 1); lastMpTs = mpTs;   // MediaPipe needs increasing timestamps
     if (lastFrameAt) fps = 0.9 * fps + 0.1 * (1000 / (now - lastFrameAt));
     lastFrameAt = now;
@@ -248,7 +251,8 @@
   // Convert a time on the audio clock to the same clock the camera frames use.
   function audioToPerf(audioTime) {
     const ts = audioCtx.getOutputTimestamp ? audioCtx.getOutputTimestamp() : null;
-    if (ts && ts.performanceTime) return ts.performanceTime + (audioTime - ts.contextTime) * 1000;
+    if (ts && ts.performanceTime) { beatClock = "getOutputTimestamp"; return ts.performanceTime + (audioTime - ts.contextTime) * 1000; }
+    beatClock = "outputLatency";
     return performance.now() + (audioTime - audioCtx.currentTime + (audioCtx.outputLatency || 0)) * 1000;
   }
 
@@ -264,7 +268,7 @@
     const bpm = Number($("bpm").value), seconds = Number($("dur").value);
     const beatSec = 60 / bpm;
     const nBeats = COUNT_IN + Math.round(seconds / beatSec);
-    const start = audioCtx.currentTime + 0.6;
+    const start = audioCtx.currentTime + GET_READY_SEC;
 
     const audioBeats = [];
     for (let k = 0; k < nBeats; k++) {
@@ -282,7 +286,7 @@
 
     sessionBtn.disabled = true; sessionBtn.textContent = "Recording…";
     // Map beat times onto the camera clock once audio is flowing.
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 1000));
     const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn }));
     session = {
       bpm, beats, frames: [],
@@ -290,8 +294,9 @@
       endPerf: beats[beats.length - 1].t + beatSec * 1000,
       userAgent: navigator.userAgent,
       outputLatency: audioCtx.outputLatency ?? null,
+      beatClock,
     };
-    statusEl.textContent = `Recording at ${bpm} BPM – dance your basic, starting on the 1`;
+    statusEl.textContent = `Get into position. After the count-in, dance your basic from the 1 (${bpm} BPM)`;
     setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
 
@@ -305,6 +310,7 @@
 
   function endSession() {
     const s = session; session = null; lastSession = s;
+    s.frameClock = frameClock;
     master.disconnect();
     wakeLock?.release?.(); wakeLock = null;
     countEl.textContent = "";
