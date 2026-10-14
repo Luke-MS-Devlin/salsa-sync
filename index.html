@@ -44,8 +44,8 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check -->
-  <h1>Salsa Sync <small id="version">v2.7</small></h1>
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see -->
+  <h1>Salsa Sync <small id="version">v2.8</small></h1>
   <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
      then start a session. You get 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
      A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.</p>
@@ -214,7 +214,7 @@
 
     liveHistory.push({ t, left: 1 - lm[L_ANKLE].y, right: 1 - lm[R_ANKLE].y });
     while (liveHistory.length && t - liveHistory[0].t > LIVE_WINDOW_MS) liveHistory.shift();
-    if (checking) checkFrame(lm, t);
+    if (checking) checkFrame(lm, t, feetVisible);
     else if (!session) drawLive(t);   // skip live chart while recording to keep the frame rate up
   }
 
@@ -577,7 +577,15 @@
     $("liveLegend").innerHTML = `Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.`;
   }
 
-  function checkFrame(lm, t) {
+  function checkFrame(lm, t, feetVisible) {
+    // The model guesses every body point even when it's off screen. Those guesses follow your upper body,
+    // so don't count anything unless both feet are clearly visible, and start the floor afresh when they come back.
+    if (!feetVisible) {
+      for (const f of Object.values(feet)) { f.up = false; f.recent = []; }
+      checkHistory.length = 0;
+      drawCheck(t, "Can't see both feet, so nothing is counted");
+      return;
+    }
     const row = { t };
     for (const [foot, hip, ankle] of [["left", 23, 27], ["right", 24, 28]]) {
       const f = feet[foot];
@@ -614,7 +622,7 @@
     l.textContent = `L ${feet.left.count}`; r.textContent = `R ${feet.right.count}`;
   }
 
-  function drawCheck(now) {
+  function drawCheck(now, message) {
     const w = live.clientWidth, h = live.clientHeight;
     const g = sizeCanvas(live, w, h);
     const top = Math.max(0.15, 2 * minLift);          // fixed scale, so the threshold line doesn't jump around
@@ -622,6 +630,7 @@
     g.setLineDash([6, 4]); g.beginPath(); g.moveTo(0, y(minLift)); g.lineTo(w, y(minLift));
     g.strokeStyle = "#aaa"; g.lineWidth = 1; g.stroke(); g.setLineDash([]);
     if (checkHistory.length > 1) plotLines(g, checkHistory, t => w - ((now - t) / LIVE_WINDOW_MS) * w, y);
+    if (message) { g.fillStyle = "#ccc"; g.font = "14px system-ui"; g.fillText(message, 10, 22); }
   }
 
   $("lift").addEventListener("input", e => {
