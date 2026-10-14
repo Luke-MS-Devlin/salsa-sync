@@ -278,11 +278,14 @@
       for (let i = 0; i + lag < x.length; i++) sum += x[i] * x[i + lag];
       scores.push({ lag, score: sum / energy });
     }
-    // Pick the best match, but if other repeat times match almost as well (e.g. marching repeats every 2 beats,
-    // so 6, 8 and 10 beats all fit), take the one closest to the music's basic.
-    const top = Math.max(...scores.map(c => c.score));
-    const best = scores.filter(c => c.score >= 0.9 * top)
-                       .reduce((a, c) => Math.abs(c.lag * step - basicMs) < Math.abs(a.lag * step - basicMs) ? c : a);
+    // Each peak in the scores is a candidate repeat time; we always use a peak's exact top, so the answer is
+    // never pulled towards the music's tempo. If two separate peaks are almost equally good (marching repeats
+    // every 2 beats, so 6, 8 and 10 beats all fit), take the peak closest to the music's basic.
+    const peaks = scores.filter((c, i) => i > 0 && i < scores.length - 1 && c.score >= scores[i - 1].score && c.score >= scores[i + 1].score);
+    if (!peaks.length) return null;
+    const top = Math.max(...peaks.map(c => c.score));
+    const best = peaks.filter(c => c.score >= 0.9 * top)
+                      .reduce((a, c) => Math.abs(c.lag * step - basicMs) < Math.abs(a.lag * step - basicMs) ? c : a);
     if (best.score < 0.25) return null;   // no clear repeating pattern
     const yourMs = best.lag * step;
     return { yourBasicMs: yourMs, musicBasicMs: Math.round(basicMs), percent: Math.round((basicMs / yourMs - 1) * 100) };
