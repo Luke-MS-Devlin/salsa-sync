@@ -23,6 +23,7 @@
     .mirror { transform:scaleX(-1); }
     .count { position:absolute; top:10px; right:14px; font-size:3.2rem; font-weight:800; color:#fff; text-shadow:0 2px 8px #000; }
     .count.big { color:var(--right); }
+    .count.go { color:var(--ok); }
     .phase { position:absolute; top:72px; right:14px; font-size:1.3rem; font-weight:700; color:#fff; text-shadow:0 2px 8px #000; text-align:right; }
     .phase.cue { color:var(--ok); font-size:1.7rem; }
     #status { margin:10px 0 6px; font-weight:600; }
@@ -38,11 +39,11 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns -->
   <h1>Salsa Sync <small id="version">v2.5</small></h1>
   <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
-     then start a session. You get 5 seconds to get into position, a count-in (5, 6, 7, 8) and two practice basics.
-     When the screen says "Real thing from the 1!", recording starts on the next 1.</p>
+     then start a session. You get 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
+     A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.</p>
 
   <div class="controls">
     <button id="cameraBtn" class="primary">Start camera</button>
@@ -340,7 +341,10 @@
                                    tone(t, { freq: 845, type: "square", gain: accent ? 0.10 : 0.05, decay: 0.12 }); };
   const clave   = t => tone(t, { freq: 2500, gain: 0.5, decay: 0.05 });
   const conga   = t => tone(t, { freq: 240, endFreq: 170, gain: 0.7, decay: 0.25 });
-  const whoop   = t => tone(t, { freq: 500, endFreq: 1400, gain: 0.35, decay: 0.35 });   // "get ready" cue before the real thing
+  // Countdown blips ("3, 2, 1, Go!"): short for the numbers, longer and higher for Go.
+  // The countdown before the real thing is pitched higher than the one before practice, so you can tell them apart.
+  const blip = (t, go, real) => tone(t, { freq: (real ? 880 : 660) * (go ? 1.5 : 1), type: "triangle", gain: 0.45, decay: go ? 0.3 : 0.1 });
+  const COUNTDOWN = ["3", "2", "1", "Go!"];
 
   // Son clave (2-3) and conga open tones, as beat positions within an 8-count (0 = the "1").
   const CLAVE_23 = [1, 2, 4, 5.5, 7];
@@ -380,14 +384,17 @@
         for (const c of CLAVE_23) if (Math.floor(c) === pos) clave(t + (c - pos) * beatSec);
         if (CONGA.includes(pos)) conga(t);
       }
-      if (k === COUNT_IN + PRACTICE_BEATS - 4) whoop(t);   // on the 5 of the last practice basic
-      audioBeats.push({ audio: t, count, countIn: inCount, practice });
+      // "3, 2, 1, Go!" on the count-in, and again on the 5-6-7-8 of the last practice basic
+      const realCountdown = k >= COUNT_IN + PRACTICE_BEATS - 4 && k < COUNT_IN + PRACTICE_BEATS;
+      const cue = inCount ? COUNTDOWN[k] : realCountdown ? COUNTDOWN[k - (COUNT_IN + PRACTICE_BEATS - 4)] : null;
+      if (cue) blip(t, cue === "Go!", realCountdown);
+      audioBeats.push({ audio: t, count, countIn: inCount, practice, cue });
     }
 
     sessionBtn.disabled = true; sessionBtn.textContent = "Recording…";
     // Map beat times onto the camera clock once audio is flowing.
     await new Promise(r => setTimeout(r, 1000));
-    const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice }));
+    const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice, cue: b.cue }));
     const firstReal = beats[COUNT_IN + PRACTICE_BEATS];
     session = {
       bpm, beats, frames: [],
@@ -398,7 +405,7 @@
       outputLatency: audioCtx.outputLatency ?? null,
       beatClock,
     };
-    statusEl.textContent = `Get into position. Count-in, ${PRACTICE_BASICS} practice basics, then the real thing (${bpm} BPM)`;
+    statusEl.textContent = `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${bpm} BPM)`;
     sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
@@ -407,14 +414,15 @@
     if (!session) { countEl.textContent = phaseEl.textContent = ""; return; }
     let current = null, i = -1;
     for (const b of session.beats) { if (b.t <= now) { current = b; i++; } else break; }
-    countEl.textContent = current ? current.count : "";
-    countEl.classList.toggle("big", !!current && (current.count === 1 || current.count === 5) && !current.countIn);
+    countEl.textContent = !current ? "" : current.cue || current.count;   // countdown beats show 3, 2, 1, Go!
+    countEl.classList.toggle("big", !!current && !current.cue && (current.count === 1 || current.count === 5));
+    countEl.classList.toggle("go", current?.cue === "Go!");
 
-    // Phase label under the count: get ready → count-in → practice → cue → recording
-    const cue = current && current.practice && i >= COUNT_IN + PRACTICE_BEATS - 4;
-    phaseEl.textContent = !current ? "Get ready" : current.countIn ? "Count-in" : cue ? "Real thing from the 1!"
+    // Phase label under the count: get ready → practice countdown → practice → real countdown → recording
+    const realNext = current && current.practice && current.cue;
+    phaseEl.textContent = !current ? "Get ready" : current.countIn ? "Practice next" : realNext ? "Real thing next!"
                         : current.practice ? `Practice ${Math.floor((i - COUNT_IN) / 8) + 1} of ${PRACTICE_BASICS}` : "Recording";
-    phaseEl.classList.toggle("cue", !!cue);
+    phaseEl.classList.toggle("cue", !!realNext);
   }
 
   // Stopping early ends the session now and keeps what was recorded so far.
