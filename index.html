@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Salsa Sync – camera test</title>
+  <style>
+    :root { --bg:#111; --panel:#1b1b1b; --fg:#f2f2f2; --muted:#a0a0a0; --left:#4ea1ff; --right:#ff5a5f; --ok:#3ecf8e; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    main { max-width:720px; margin:0 auto; padding:16px; }
+    h1 { font-size:1.3rem; margin:0 0 4px; }
+    p { color:var(--muted); margin:0 0 12px; font-size:.95rem; line-height:1.4; }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    button, select { font:inherit; padding:10px 14px; border-radius:8px; border:1px solid #333; background:#222; color:var(--fg); }
+    button.primary { background:var(--right); border-color:var(--right); color:#fff; }
+    .stage { position:relative; width:100%; aspect-ratio:3/4; background:#000; border-radius:12px; overflow:hidden; }
+    video, #overlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+    .mirror { transform:scaleX(-1); }
+    #status { margin:10px 0 6px; font-weight:600; }
+    #chart { width:100%; height:150px; background:var(--panel); border-radius:8px; display:block; }
+    .legend { font-size:.85rem; color:var(--muted); margin-top:6px; }
+    .legend b.l { color:var(--left); } .legend b.r { color:var(--right); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Salsa Sync: camera test</h1>
+  <p>Prop your phone 2.5–3 m away so your whole body, feet included, is in frame. Press Start, then do a few basic steps.
+     Each time a foot lifts and lands you should see a bump in the chart below. Those bumps are what the app will time against the music.</p>
+
+  <div class="controls">
+    <button id="start" class="primary">Start camera</button>
+    <select id="camera" aria-label="Camera">
+      <option value="environment">Back camera</option>
+      <option value="user">Front camera</option>
+    </select>
+  </div>
+
+  <div class="stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div id="status">Press Start to begin.</div>
+  <canvas id="chart"></canvas>
+  <div class="legend">Ankle height over the last 5 seconds: <b class="l">left</b> and <b class="r">right</b> (higher line = foot lifted)</div>
+</main>
+
+<script type="module">
+  // MediaPipe Tasks Vision: open-source pose model that runs entirely in the browser.
+  import { PoseLandmarker, FilesetResolver, DrawingUtils }
+    from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35";
+
+  const WASM_URL  = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm";
+  const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+
+  // MediaPipe's 33 body landmarks; these are the foot ones.
+  const L_ANKLE = 27, R_ANKLE = 28;
+  const FOOT_POINTS = [27, 28, 29, 30, 31, 32]; // ankles, heels, toes
+  const WINDOW_MS = 5000;                        // how much history the chart shows
+
+  const video   = document.getElementById("video");
+  const overlay = document.getElementById("overlay");
+  const ctx     = overlay.getContext("2d");
+  const chart   = document.getElementById("chart");
+  const cctx    = chart.getContext("2d");
+  const statusEl = document.getElementById("status");
+  const startBtn = document.getElementById("start");
+  const camSel   = document.getElementById("camera");
+  const draw     = new DrawingUtils(ctx);
+
+  let landmarker = null, stream = null, running = false, lastVideoTime = -1;
+  let fps = 0, lastFrameAt = 0;
+  const history = []; // { t, left, right } samples for the chart
+
+  async function loadModel() {
+    statusEl.textContent = "Loading pose model…";
+    const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+    landmarker = await PoseLandmarker.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+      runningMode: "VIDEO",
+      numPoses: 1,
+    });
+  }
+
+  async function startCamera() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: camSel.value, width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+    const mirror = camSel.value === "user"; // mirror the selfie view so it feels natural
+    video.classList.toggle("mirror", mirror);
+    overlay.classList.toggle("mirror", mirror);
+  }
+
+  function onResult(result, now) {
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    const lm = result.landmarks[0];
+    if (!lm) { statusEl.textContent = `No one detected · ${fps.toFixed(0)} fps`; return; }
+
+    draw.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS, { color: "#ffffff", lineWidth: 3 });
+    draw.drawLandmarks(lm, { color: "#ffffff", radius: 2 });
+    for (const i of FOOT_POINTS) {               // make the feet stand out
+      ctx.beginPath();
+      ctx.arc(lm[i].x * overlay.width, lm[i].y * overlay.height, 6, 0, 2 * Math.PI);
+      ctx.fillStyle = i % 2 ? "#4ea1ff" : "#ff5a5f"; // odd = left, even = right
+      ctx.fill();
+    }
+
+    const feetVisible = FOOT_POINTS.every(i => (lm[i].visibility ?? 0) > 0.5);
+    statusEl.innerHTML = feetVisible
+      ? `<span style="color:var(--ok)">Feet visible ✓</span> · ${fps.toFixed(0)} fps`
+      : `Can't see both feet clearly – step back or tilt the phone down · ${fps.toFixed(0)} fps`;
+
+    // Image y runs top-to-bottom, so height = 1 - y (bigger = foot higher).
+    history.push({ t: now, left: 1 - lm[L_ANKLE].y, right: 1 - lm[R_ANKLE].y });
+    while (history.length && now - history[0].t > WINDOW_MS) history.shift();
+    drawChart(now);
+  }
+
+  function drawChart(now) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = chart.clientWidth, h = chart.clientHeight;
+    if (chart.width !== w * dpr) { chart.width = w * dpr; chart.height = h * dpr; }
+    cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cctx.clearRect(0, 0, w, h);
+    if (history.length < 2) return;
+
+    const vals = history.flatMap(s => [s.left, s.right]);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const pad = Math.max((hi - lo) * 0.15, 0.01); lo -= pad; hi += pad;
+    const x = t => w - ((now - t) / WINDOW_MS) * w;
+    const y = v => h - ((v - lo) / (hi - lo)) * h;
+
+    for (const [key, colour] of [["left", "#4ea1ff"], ["right", "#ff5a5f"]]) {
+      cctx.beginPath();
+      history.forEach((s, i) => (i ? cctx.lineTo(x(s.t), y(s[key])) : cctx.moveTo(x(s.t), y(s[key]))));
+      cctx.strokeStyle = colour; cctx.lineWidth = 2; cctx.stroke();
+    }
+  }
+
+  function loop() {
+    if (!running) return;
+    if (video.currentTime !== lastVideoTime) {   // only process new camera frames
+      lastVideoTime = video.currentTime;
+      const now = performance.now();
+      if (lastFrameAt) fps = 0.9 * fps + 0.1 * (1000 / (now - lastFrameAt));
+      lastFrameAt = now;
+      landmarker.detectForVideo(video, now, result => onResult(result, now));
+    }
+    requestAnimationFrame(loop);
+  }
+
+  startBtn.addEventListener("click", async () => {
+    try {
+      startBtn.disabled = true;
+      if (!landmarker) await loadModel();
+      await startCamera();
+      running = true;
+      startBtn.textContent = "Running";
+      loop();
+    } catch (err) {
+      statusEl.textContent = "Couldn't start: " + err.message;
+      startBtn.disabled = false;
+    }
+  });
+
+  camSel.addEventListener("change", async () => {
+    if (!running) return;
+    try { await startCamera(); history.length = 0; } catch (err) { statusEl.textContent = "Camera error: " + err.message; }
+  });
+</script>
+</body>
+</html>
