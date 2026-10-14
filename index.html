@@ -39,8 +39,8 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns -->
-  <h1>Salsa Sync <small id="version">v2.5</small></h1>
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score -->
+  <h1>Salsa Sync <small id="version">v2.6</small></h1>
   <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
      then start a session. You get 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
      A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.</p>
@@ -254,9 +254,52 @@
     return matched;
   }
 
+  // ---------- Tempo score ----------
+  // How long does your basic take? Your feet swap places in a pattern that repeats once per basic (8 beats).
+  // Autocorrelation asks "after how many ms does the movement look like itself again?" across the whole session,
+  // so it still works when individual steps are too small to time.
+  function tempoMatch(s) {
+    const basicMs = 8 * 60000 / s.bpm, f = s.frames;
+    if (f.length < 20 || f[f.length - 1].t - f[0].t < 3 * basicMs) return null;
+    // Left ankle height minus right ankle height, resampled every 10 ms so the frame rate doesn't matter.
+    const sig = [], step = 10;
+    for (let t = f[0].t, i = 0; t <= f[f.length - 1].t; t += step) {
+      while (f[i + 1].t < t) i++;
+      const a = f[i], b = f[i + 1], k = (t - a.t) / (b.t - a.t);
+      const diff = fr => fr.pts[L_ANKLE][1] - fr.pts[R_ANKLE][1];
+      sig.push(diff(a) + k * (diff(b) - diff(a)));
+    }
+    const mean = sig.reduce((x, y) => x + y, 0) / sig.length, x = sig.map(v => v - mean);
+    const energy = x.reduce((sum, v) => sum + v * v, 0);
+    // Try every repeat time from 25% faster to 33% slower than the music's basic and score how well it matches.
+    const scores = [];
+    for (let lag = Math.round(0.75 * basicMs / step); lag <= Math.round(1.33 * basicMs / step); lag++) {
+      let sum = 0;
+      for (let i = 0; i + lag < x.length; i++) sum += x[i] * x[i + lag];
+      scores.push({ lag, score: sum / energy });
+    }
+    // Pick the best match, but if other repeat times match almost as well (e.g. marching repeats every 2 beats,
+    // so 6, 8 and 10 beats all fit), take the one closest to the music's basic.
+    const top = Math.max(...scores.map(c => c.score));
+    const best = scores.filter(c => c.score >= 0.9 * top)
+                       .reduce((a, c) => Math.abs(c.lag * step - basicMs) < Math.abs(a.lag * step - basicMs) ? c : a);
+    if (best.score < 0.25) return null;   // no clear repeating pattern
+    const yourMs = best.lag * step;
+    return { yourBasicMs: yourMs, musicBasicMs: Math.round(basicMs), percent: Math.round((basicMs / yourMs - 1) * 100) };
+  }
+
+  function tempoSentence(tempo) {
+    if (!tempo) return "I couldn't find a steady repeating basic to measure your tempo.";
+    const yours = (tempo.yourBasicMs / 1000).toFixed(2), music = (tempo.musicBasicMs / 1000).toFixed(2);
+    if (Math.abs(tempo.percent) <= 3) return `Tempo: spot on. Your basic took ${yours} s and the music's takes ${music} s.`;
+    return tempo.percent > 0
+      ? `Tempo: you're rushing. Your basic took ${yours} s but the music's takes ${music} s, so you're ${tempo.percent}% too fast.`
+      : `Tempo: you're dragging. Your basic took ${yours} s but the music's takes ${music} s, so you're ${-tempo.percent}% too slow.`;
+  }
+
   function timingReport(steps, nBeats) {
     if (steps.length < Math.max(4, nBeats * 0.3)) {
-      return { steps: steps.length, text: "I couldn't see enough steps. Check both feet are in frame and lift them a little more." };
+      return { steps: steps.length, text: "Steps: I couldn't see enough clear foot lifts to time them." };
     }
     const offsets = steps.map(s => s.offset);
     const mean = offsets.reduce((a, b) => a + b, 0) / offsets.length;
@@ -266,12 +309,12 @@
                : mean > 30  ? `You're dragging: on average you land ${Math.round(mean)} ms after the beat.`
                : `Nice: on average you land right on the beat (${mean >= 0 ? "+" : ""}${Math.round(mean)} ms).`;
     const steady = sd < 60 ? "Your timing is very consistent." : "Your timing is fairly consistent.";
-    // If steps are spread right across the beat, the average means little: you're probably at a different tempo.
-    const summary = sd >= 90
-      ? "Your steps drift through the beat instead of landing on it, so you may be dancing faster or slower than the music. Try locking onto the cowbell, which plays on every beat."
-      : `${when} ${steady}`;
+    // Spread right across the beat means the timings can't be trusted: either you drifted off tempo
+    // (the tempo score will say so) or your steps were too small to time, e.g. salsa filmed from the front.
+    if (sd >= 90) return { steps: steps.length, meanMs: Math.round(mean), consistencyMs: Math.round(sd), onTimePct: Math.round(onTime * 100),
+      text: "Steps: I couldn't time your individual steps reliably this time, so go by the tempo score." };
     return { steps: steps.length, meanMs: Math.round(mean), consistencyMs: Math.round(sd), onTimePct: Math.round(onTime * 100),
-             text: `${summary} ${Math.round(onTime * 100)}% of your steps were within ${ON_TIME_MS} ms of the beat.` };
+             text: `Steps: ${when} ${steady} ${Math.round(onTime * 100)}% of your steps were within ${ON_TIME_MS} ms of the beat.` };
   }
 
   // ---------- Charts ----------
@@ -451,7 +494,8 @@
     const nBeats = s.beats.filter(b => !b.countIn && !b.practice).length;
     s.steps = detectSteps(s);
     s.report = timingReport(s.steps, nBeats);
-    $("feedback").textContent = s.report.text;
+    s.tempo = tempoMatch(s);
+    $("feedback").textContent = `${tempoSentence(s.tempo)} ${s.report.text}`;
 
     const secs = (s.endPerf - s.startPerf) / 1000;
     const visible = s.frames.filter(f => FOOT_POINTS.every(i => f.pts[i][2] > 0.5)).length;
