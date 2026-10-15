@@ -89,16 +89,19 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting and Sync (march to clicks to measure it) -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.14</small></h1>
+    <h1>Salsa Sync <small id="version">v2.15</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
          then hold a hand over a button until it fills up. Raising both hands during a session or step check stops it.</p>
-      <p>A session gives you 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
-         A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.
-         Step check starts with 3 seconds of standing still, then flashes L or R each time it sees a foot land.</p>
+      <p>A session and step check both start by asking you to raise and lower your hands, then stand still for 3 seconds.
+         A session then plays a "3, 2, 1, Go!" countdown and two practice basics. A second, higher "3, 2, 1, Go!" means
+         the real thing starts on the next 1, and that part is recorded. Step check flashes L or R each time it sees a foot land.</p>
+      <p>Bluetooth headphones and speakers play the music late, which makes every step look late. Press Sync once per
+         device: march on the spot, one step on every click, and it sets the audio delay for you.
+         Filming from slightly to one side helps when your feet cross in front of each other.</p>
     </details>
   </header>
 
@@ -119,7 +122,7 @@
         <button class="tile right" data-act="tempo+">+ Tempo <b class="tTempo">160</b></button>
         <button class="tile left" data-act="length-">− Length <b class="tLen">30 s</b></button>
         <button class="tile right" data-act="length+">+ Length <b class="tLen">30 s</b></button>
-        <button class="tile left" data-act="voice">Voice <b id="tVoice">on</b></button>
+        <button class="tile left" data-act="sync">🎧 Sync <b id="tSync">0 ms</b></button>
         <button class="tile right" data-act="close">✕ Close</button>
       </div>
       <div id="handL" class="hand" hidden></div><div id="handR" class="hand" hidden></div>
@@ -146,6 +149,8 @@
         <label><input type="checkbox" id="voice" checked> Voice</label>
         <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04"> <span id="liftVal">4%</span> of leg</label>
         <span id="calibNote" class="legend"></span>
+        <label>Audio delay <input id="delay" type="range" min="0" max="400" step="10" value="0"> <span id="delayVal">0 ms</span></label>
+        <button id="syncBtn" disabled>Sync</button>
       </div>
       <div id="status">Press Start camera to begin.</div>
 
@@ -373,12 +378,14 @@
       }
       prev = row;
     }
+    // You hear each beat audioDelayMs after it was sent to the speakers (Bluetooth adds a lot), so that's when it counts.
     // Negative offset = early (rushing), positive = late (dragging).
-    const matched = [];
+    const delay = s.audioDelayMs ?? 0, matched = [];
     for (const step of steps) {
+      const heard = b => b.t + delay;
       let nearest = realBeats[0];
-      for (const b of realBeats) if (Math.abs(b.t - step.t) < Math.abs(nearest.t - step.t)) nearest = b;
-      const offset = step.t - nearest.t;
+      for (const b of realBeats) if (Math.abs(heard(b) - step.t) < Math.abs(heard(nearest) - step.t)) nearest = b;
+      const offset = step.t - heard(nearest);
       if (Math.abs(offset) <= beatMs / 2) matched.push({ t: round(step.t, 1), foot: step.foot, count: nearest.count, offset: Math.round(offset) });
     }
     return matched;
@@ -540,34 +547,66 @@
     return performance.now() + (audioTime - audioCtx.currentTime + (audioCtx.outputLatency || 0)) * 1000;
   }
 
+  // ---------- Audio delay ----------
+  // How late you hear the music, in ms. Measured by Sync and remembered on this device.
+  const SYNC_BPM = 100, SYNC_BEATS = 16;   // slow, so even a long Bluetooth delay is less than half a beat
+  let audioDelay = 0;
+  try { audioDelay = Number(localStorage.getItem("audioDelayMs")) || 0; } catch {}
+  function setDelay(ms) {
+    audioDelay = Math.max(0, Math.min(400, Math.round(ms / 10) * 10));
+    $("delay").value = audioDelay; $("delayVal").textContent = `${audioDelay} ms`;
+    try { localStorage.setItem("audioDelayMs", audioDelay); } catch {}
+  }
+  setDelay(audioDelay);
+  $("delay").addEventListener("input", e => setDelay(Number(e.target.value)));
+  $("syncBtn").addEventListener("click", () => { if (running && !session && !checking) startCheck("sync"); });
+
+  // Sync: march on the spot, one step per click. You step when you hear the click, so the typical gap between
+  // the clicks we sent and your steps is the delay. (The median, so a few missed or extra steps don't matter.)
+  function finishSync(s) {
+    const offsets = detectSteps({ ...s, audioDelayMs: 0 }).map(st => st.offset).sort((a, b) => a - b);
+    if (offsets.length < SYNC_BEATS / 2) {
+      showPrompt("Sync didn't work", "red", { sub: "I couldn't see enough steps", say: "I couldn't see enough steps. Try again, lifting your feet a bit higher.", important: true, hideAfter: 6000 });
+      return;
+    }
+    const median = offsets[Math.floor(offsets.length / 2)];
+    setDelay(Math.max(0, median)); updateTiles();
+    $("rcText").textContent = `Audio delay set to ${audioDelay} ms (from ${offsets.length} steps). Sessions now time your steps against when you hear the beat.`;
+    $("resultCard").hidden = false;
+    showPrompt("Synced", "green", { sub: `delay ${audioDelay} ms`, say: `Synced. The delay is ${audioDelay} milliseconds.`, important: true, hideAfter: 6000 });
+  }
+
   // ---------- Session ----------
   let wakeLock = null, endTimer = null;
 
-  async function startSession() {
+  // mode "salsa" is the normal session; "sync" is 16 plain clicks to march to, for measuring the audio delay.
+  async function startSession(mode = "salsa") {
+    const sync = mode === "sync";
     if (!audioCtx) { audioCtx = new AudioContext({ latencyHint: "interactive" }); }
     await audioCtx.resume();
     master = audioCtx.createGain(); master.connect(audioCtx.destination);
     try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
 
-    const bpm = Number($("bpm").value), seconds = Number($("dur").value);
+    const bpm = sync ? SYNC_BPM : Number($("bpm").value), seconds = Number($("dur").value);
     const beatSec = 60 / bpm;
-    const nBeats = COUNT_IN + PRACTICE_BEATS + Math.round(seconds / beatSec);
+    const practiceBeats = sync ? 0 : PRACTICE_BEATS;
+    const nBeats = COUNT_IN + practiceBeats + (sync ? SYNC_BEATS : Math.round(seconds / beatSec));
     const start = audioCtx.currentTime + GET_READY_SEC;
 
     const audioBeats = [];
     for (let k = 0; k < nBeats; k++) {
       const t = start + k * beatSec;
       const inCount = k < COUNT_IN;
-      const practice = !inCount && k < COUNT_IN + PRACTICE_BEATS;
+      const practice = !inCount && k < COUNT_IN + practiceBeats;
       const pos = (k - COUNT_IN + 8 * 100) % 8;           // 0..7 within the 8-count
       const count = inCount ? 5 + k : pos + 1;            // count-in shows 5,6,7,8
       cowbell(t, count === 1 || count === 5);
-      if (!inCount) {
+      if (!inCount && !sync) {
         for (const c of CLAVE_23) if (Math.floor(c) === pos) clave(t + (c - pos) * beatSec);
         if (CONGA.includes(pos)) conga(t);
       }
       // "3, 2, 1, Go!" on the count-in, and again on the 5-6-7-8 of the last practice basic
-      const realCountdown = k >= COUNT_IN + PRACTICE_BEATS - 4 && k < COUNT_IN + PRACTICE_BEATS;
+      const realCountdown = !sync && k >= COUNT_IN + practiceBeats - 4 && k < COUNT_IN + practiceBeats;
       const cue = inCount ? COUNTDOWN[k] : realCountdown ? COUNTDOWN[k - (COUNT_IN + PRACTICE_BEATS - 4)] : null;
       if (cue) blip(t, cue === "Go!", realCountdown);
       audioBeats.push({ audio: t, count, countIn: inCount, practice, cue });
@@ -577,9 +616,10 @@
     // Map beat times onto the camera clock once audio is flowing.
     await new Promise(r => setTimeout(r, 1000));
     const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice, cue: b.cue }));
-    const firstReal = beats[COUNT_IN + PRACTICE_BEATS];
+    const firstReal = beats[COUNT_IN + practiceBeats];
     session = {
-      bpm, beats, frames: [],
+      bpm, beats, frames: [], sync,
+      audioDelayMs: sync ? 0 : audioDelay,
       startPerf: firstReal.t - 200,                        // only the real part is recorded
       endPerf: beats[beats.length - 1].t + beatSec * 1000,
       appVersion: APP_VERSION,
@@ -588,8 +628,9 @@
       outputLatency: audioCtx.outputLatency ?? null,
       beatClock,
     };
-    statusEl.textContent = `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${bpm} BPM)`;
-    speak("Get ready.");
+    statusEl.textContent = sync ? `Sync: after the countdown, march on the spot, one step on every click (${SYNC_BEATS} clicks)`
+      : `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${bpm} BPM)`;
+    speak(sync ? "March on the spot, one step on every click." : "Get ready.");
     sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
@@ -613,6 +654,7 @@
     else if (current.countIn) showPrompt("Practice next", "amber");
     else if (realNext) showPrompt("Real thing next!", "amber");
     else if (current.practice) showPrompt("Practice", "green", { sub: `basic ${Math.floor((i - COUNT_IN) / 8) + 1} of ${PRACTICE_BASICS}`, hideAfter: 1500 });
+    else if (session.sync) showPrompt("March", "green", { sub: "one step on every click" });
     else showPrompt("Recording", "green", { hideAfter: 1500 });
   }
 
@@ -638,6 +680,7 @@
     wakeLock?.release?.(); wakeLock = null;
     countEl.textContent = phaseEl.textContent = "";
     sessionBtn.disabled = false; sessionBtn.textContent = "Start session"; checkBtn.disabled = false;
+    if (s.sync) { finishSync(s); return; }
 
     const nBeats = s.beats.filter(b => !b.countIn && !b.practice).length;
     s.steps = detectSteps(s);
@@ -677,7 +720,7 @@
     video.srcObject = null;
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     liveHistory.length = 0;
-    cameraBtn.textContent = "Start camera"; sessionBtn.disabled = checkBtn.disabled = true;
+    cameraBtn.textContent = "Start camera"; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = true;
     showPrompt(null); closeMenu();
     statusEl.textContent = "Camera stopped.";
   }
@@ -692,7 +735,7 @@
   const checkHistory = [];
   const feet = {};
   const CALIB_MS = 3000;
-  let calib = null;    // { forSession, ready, handsWereUp, start, maxDiff, done }
+  let calib = null;    // { forSession (false, "salsa" or "sync"), ready, handsWereUp, start, maxDiff, done }
   let feetWereLost = false;
 
   function startCheck(forSession = false) {
@@ -702,7 +745,7 @@
     feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0; $("resultCard").hidden = true;
     calib = { forSession, ready: false, handsWereUp: false, start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
     checking = true; feetWereLost = false;
-    $("feet").hidden = forSession; updateFeet();
+    $("feet").hidden = !!forSession; updateFeet();
     if (forSession) { sessionBtn.textContent = "Cancel"; checkBtn.disabled = true; }
     else { checkBtn.textContent = "Stop step check"; sessionBtn.disabled = true; }
     $("liveLegend").innerHTML = `Live lift off the floor (last 5 s): <b class="l">left</b> and <b class="r">right</b>.
@@ -758,7 +801,7 @@
       }
       finishCalibration();
       if (calib.forSession) {   // calibrated: start the music
-        stopCheck({ quiet: true }); showPrompt("Get ready", "amber", { sub: "Music starts in a moment", hideAfter: 1500 }); runSession(); return;
+        stopCheck({ quiet: true }); showPrompt("Get ready", "amber", { sub: "Music starts in a moment", hideAfter: 1500 }); runSession(calib.forSession); return;
       }
       showPrompt("Go! Start stepping", "green", { say: "Done. Start stepping.", hideAfter: 2500 });
     }
@@ -892,7 +935,7 @@
   function updateTiles() {
     document.querySelectorAll(".tTempo").forEach(b => b.textContent = $("bpm").value);
     document.querySelectorAll(".tLen").forEach(b => b.textContent = $("dur").selectedOptions[0].text);
-    $("tVoice").textContent = $("voice").checked ? "on" : "off";
+    $("tSync").textContent = `${audioDelay} ms`;
   }
   function menuAction(act) {
     menuActiveAt = performance.now();
@@ -902,7 +945,7 @@
     else if (act === "check") { closeMenu(); startCheck(); }
     else if (act.startsWith("tempo")) { step($("bpm"), act.endsWith("+") ? 1 : -1); speak(`Tempo ${$("bpm").value}`); }
     else if (act.startsWith("length")) { step($("dur"), act.endsWith("+") ? 1 : -1); speak(`${$("dur").value} seconds`); }
-    else if (act === "voice") { $("voice").checked = !$("voice").checked; speak("Voice on"); }
+    else if (act === "sync") { closeMenu(); startCheck("sync"); }
     else closeMenu();
     updateTiles();
   }
@@ -965,7 +1008,7 @@
       speak("Starting the camera.");
       if (!landmarker) await loadModel();
       await startCamera();
-      running = true; cameraBtn.textContent = "Stop camera"; sessionBtn.disabled = checkBtn.disabled = false;
+      running = true; cameraBtn.textContent = "Stop camera"; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = false;
       cameraBtn.disabled = false;
       scheduleNextFrame();
     } catch (err) {
@@ -980,8 +1023,8 @@
   });
 
   // Start session = calibrate first (the same stand-still as step check), then the music. Pressing it again cancels.
-  function runSession() {
-    startSession().catch(err => {
+  function runSession(mode) {
+    startSession(mode).catch(err => {
       statusEl.textContent = "Session error: " + err.message; session = null;
       sessionBtn.disabled = false; sessionBtn.textContent = "Start session";
     });
@@ -990,7 +1033,7 @@
   sessionBtn.addEventListener("click", () => {
     if (session) stopSession();
     else if (checking && calib.forSession) cancelCalibration();
-    else startCheck(true);
+    else startCheck("salsa");
   });
 </script>
 </body>
