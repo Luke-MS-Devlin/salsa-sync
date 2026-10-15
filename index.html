@@ -96,9 +96,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.17 clearer step result, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.16</small></h1>
+    <h1>Salsa Sync <small id="version">v2.17</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -155,7 +155,8 @@
         <p id="summary"></p>
         <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
         <div class="legend">Grey lines are beats; the thicker ones are the 1 and the 5. Each ▲ along the bottom is a detected step
-          (<b class="l">left</b> or <b class="r">right</b> foot). Steps on time sit on a beat line.</div>
+          (<b class="l">left</b> or <b class="r">right</b> foot), placed where the foot comes back down, because the step
+          counts when your weight lands, not when your foot is highest. Steps on time sit on a beat line.</div>
         <div class="controls" style="margin-top:10px"><button id="downloadBtn">Download session data (JSON)</button></div>
       </section>
 
@@ -464,24 +465,28 @@
       : `Tempo: you're dragging. Your basic took ${yours} s but the music's takes ${music} s, so you're ${-tempo.percent}% too slow.`;
   }
 
+  // How close your landings were to the beat. An average would let early and late steps cancel out (half 100 ms
+  // early and half 100 ms late averages to "right on the beat"), so instead: how many steps were on the beat or
+  // close, plus your habit (the middle offset), which says whether you tend to land early or late.
+  const CLOSE_MS = 100;         // within this many ms counts as close
   function timingReport(steps, nBeats) {
     if (steps.length < Math.max(4, nBeats * 0.3)) {
       return { steps: steps.length, text: "Steps: I couldn't see enough clear foot lifts to time them." };
     }
-    const offsets = steps.map(s => s.offset);
-    const mean = offsets.reduce((a, b) => a + b, 0) / offsets.length;
-    const sd = Math.sqrt(offsets.reduce((a, b) => a + (b - mean) ** 2, 0) / offsets.length);   // consistency
-    const onTime = offsets.filter(o => Math.abs(o) <= ON_TIME_MS).length / offsets.length;
-    const when = mean < -30 ? `You're rushing: on average you land ${Math.round(-mean)} ms before the beat.`
-               : mean > 30  ? `You're dragging: on average you land ${Math.round(mean)} ms after the beat.`
-               : `Nice: on average you land right on the beat (${mean >= 0 ? "+" : ""}${Math.round(mean)} ms).`;
-    const steady = sd < 60 ? "Your timing is very consistent." : "Your timing is fairly consistent.";
-    // Spread right across the beat means the timings can't be trusted: either you drifted off tempo
-    // (the tempo score will say so) or your steps were too small to time, e.g. salsa filmed from the front.
-    if (sd >= 90) return { steps: steps.length, meanMs: Math.round(mean), consistencyMs: Math.round(sd), onTimePct: Math.round(onTime * 100),
-      text: "Steps: I couldn't time your individual steps reliably this time, so go by the tempo score." };
-    return { steps: steps.length, meanMs: Math.round(mean), consistencyMs: Math.round(sd), onTimePct: Math.round(onTime * 100),
-             text: `Steps: ${when} ${steady} ${Math.round(onTime * 100)}% of your steps were within ${ON_TIME_MS} ms of the beat.` };
+    const offsets = steps.map(s => s.offset).sort((a, b) => a - b);
+    const misses = offsets.map(Math.abs).sort((a, b) => a - b);
+    const middle = a => a[Math.floor(a.length / 2)];
+    const habit = middle(offsets), typicalMiss = middle(misses);
+    const pct = ms => Math.round(100 * misses.filter(m => m <= ms).length / misses.length);
+    const onTime = pct(ON_TIME_MS), close = pct(CLOSE_MS) - onTime;
+    const result = { steps: steps.length, habitMs: habit, typicalMissMs: typicalMiss, onTimePct: onTime, closePct: close };
+    // Misses this big mean the steps were spread right across the beat: either you drifted off tempo (the tempo
+    // score will say so) or your steps were too small to time, e.g. salsa filmed from the front.
+    if (typicalMiss > 120) return { ...result, text: "Steps: I couldn't time your individual steps reliably this time, so go by the tempo score." };
+    const tendency = habit < -30 ? `You tend to land a little early (about ${-habit} ms).`
+                   : habit > 30  ? `You tend to land a little late (about ${habit} ms).`
+                   : "No early or late habit.";
+    return { ...result, text: `Steps: ${onTime}% landed on the beat (within 0.05 s) and another ${close}% were close (within 0.1 s). ${tendency}` };
   }
 
   // ---------- Charts ----------
@@ -522,11 +527,11 @@
     const g = sizeCanvas(c, w, h);
     const x = t => ((t - t0) / (t1 - t0)) * w;
 
-    for (const b of s.beats) {                 // beat grid
-      const strong = b.count === 1 || b.count === 5;
-      g.beginPath(); g.moveTo(x(b.t), 0); g.lineTo(x(b.t), h);
+    for (const b of s.beats) {                 // beat grid, drawn when you heard each beat (after the audio delay)
+      const strong = b.count === 1 || b.count === 5, bx = x(b.t + (s.audioDelayMs ?? 0));
+      g.beginPath(); g.moveTo(bx, 0); g.lineTo(bx, h);
       g.strokeStyle = strong ? "#777" : "#3a3a3a"; g.lineWidth = strong ? 2 : 1; g.stroke();
-      if (strong) { g.fillStyle = "#999"; g.font = "11px system-ui"; g.fillText(String(b.count), x(b.t) + 3, 12); }
+      if (strong) { g.fillStyle = "#999"; g.font = "11px system-ui"; g.fillText(String(b.count), bx + 3, 12); }
     }
     const series = s.frames.map(f => ({ t: f.t, left: 1 - f.pts[L_ANKLE][1], right: 1 - f.pts[R_ANKLE][1] }));
     if (series.length > 1) plotLines(g, series, x, yScale(series, h));
