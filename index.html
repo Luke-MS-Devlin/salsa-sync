@@ -44,8 +44,8 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps -->
-  <h1>Salsa Sync <small id="version">v2.9</small></h1>
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration -->
+  <h1>Salsa Sync <small id="version">v2.10</small></h1>
   <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
      then start a session. You get 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
      A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.</p>
@@ -69,6 +69,7 @@
   <div class="controls">
     <button id="checkBtn" disabled>Step check</button>
     <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04"> <span id="liftVal">4%</span> of leg</label>
+    <span id="calibNote" class="legend"></span>
   </div>
 
   <div class="stage">
@@ -551,18 +552,24 @@
   // ---------- Step check (live) ----------
   // The same rules as detectSteps, run frame by frame so you see each step as it happens:
   // a foot is "up" once it rises minLift above its floor, and it has landed when it drops back to half its peak.
+  // Two extra rules: only one foot can be up at a time, and it has to be clearly higher than the other foot
+  // (in salsa one foot always stays down, so both rising together is body movement, not a step).
+  // It starts with 3 s of standing still to measure how much the points wobble, and sets minLift from that.
   // Differences from the session version: the floor and leg length only use the past (we can't see the future live),
   // and a landing is only known once the foot is half way down, so the flash comes a moment after the step.
   let checking = false;
   const checkHistory = [];
   const feet = {};
-  const resetFoot = () => ({ leg: 0, recent: [], up: false, peak: 0, count: 0 });
+  const resetFoot = () => ({ leg: 0, recent: [], up: false, armed: true, peak: 0, count: 0 });
+  const CALIB_MS = 3000;
+  let calib = null;    // { start, maxDiff, done }
 
   function startCheck() {
     if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
     audioCtx.resume();
     master = audioCtx.createGain(); master.connect(audioCtx.destination);
     feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0;
+    calib = { start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
     checking = true;
     $("feet").hidden = false; updateFeet();
     checkBtn.textContent = "Stop step check"; sessionBtn.disabled = true;
@@ -583,6 +590,7 @@
     if (!feetVisible) {
       for (const f of Object.values(feet)) { f.up = false; f.recent = []; }
       checkHistory.length = 0;
+      if (!calib.done) { calib.start = null; calib.maxDiff = 0; }   // calibration restarts once the feet are back
       drawCheck(t, "Can't see both feet, so nothing is counted");
       return;
     }
@@ -599,18 +607,48 @@
       const height = 1 - lm[ankle].y;
       f.recent.push({ t, height });
       while (t - f.recent[0].t > 2 * FLOOR_WINDOW) f.recent.shift();
-      const lift = (height - Math.min(...f.recent.map(r => r.height))) / f.leg;
-      // 3. Up once the lift passes minLift. 4. Landed once it falls back to half the highest point.
-      if (!f.up && lift >= minLift) { f.up = true; f.peak = lift; }
-      else if (f.up) {
-        f.peak = Math.max(f.peak, lift);
-        if (lift <= f.peak / 2) { f.up = false; f.count++; landed(foot); }
-      }
-      row[foot] = lift;
+      row[foot] = (height - Math.min(...f.recent.map(r => r.height))) / f.leg;
     }
     checkHistory.push(row);
     while (t - checkHistory[0].t > LIVE_WINDOW_MS) checkHistory.shift();
+
+    // Calibration: for the first 3 s, don't count anything, just record the biggest gap between the feet.
+    if (!calib.done) {
+      calib.start ??= t;
+      calib.maxDiff = Math.max(calib.maxDiff, Math.abs(row.left - row.right));
+      if (t - calib.start < CALIB_MS) {
+        const secs = Math.ceil((CALIB_MS - (t - calib.start)) / 1000);
+        const [l, r] = $("feet").children; l.textContent = "Stand still"; r.textContent = secs;   // big, on the video
+        drawCheck(t, `Stand still with both feet down… ${secs}`);
+        return;
+      }
+      finishCalibration(); updateFeet();
+    }
+
+    for (const [foot, other] of [["left", "right"], ["right", "left"]]) {
+      const f = feet[foot], lift = row[foot];
+      // 3. Up once it passes minLift AND is at least half that higher than the other foot (and the other foot isn't up).
+      //    (Requiring the full minLift gap missed real steps, because the standing foot also rises a little.)
+      // 4. Landed once it falls back to half its highest point.
+      // 5. After landing it must drop back below the line before it can count again, so one high lift isn't two steps.
+      if (!f.up && lift < minLift) f.armed = true;
+      if (!f.up && f.armed && !feet[other].up && lift >= minLift && lift - row[other] >= minLift / 2) { f.up = true; f.peak = lift; }
+      else if (f.up) {
+        f.peak = Math.max(f.peak, lift);
+        if (lift <= f.peak / 2) { f.up = false; f.armed = false; f.count++; landed(foot); }
+      }
+    }
     drawCheck(t);
+  }
+
+  // Set the lift needed to twice the biggest wobble seen while standing still, kept between 2% and 6% of leg length.
+  function finishCalibration() {
+    calib.done = true;
+    const wobble = calib.maxDiff;
+    minLift = Math.min(0.06, Math.max(0.02, Math.round(2 * wobble / 0.005) * 0.005));
+    $("lift").value = minLift; showLift();
+    $("calibNote").textContent = `Calibrated: your feet wobbled up to ${(wobble * 100).toFixed(1)}% standing still` +
+      (2 * wobble > 0.06 ? " (that's a lot – try better light or moving closer)." : ".");
   }
 
   function landed(foot) {
@@ -636,10 +674,8 @@
     if (message) { g.fillStyle = "#ccc"; g.font = "14px system-ui"; g.fillText(message, 10, 22); }
   }
 
-  $("lift").addEventListener("input", e => {
-    minLift = Number(e.target.value);
-    $("liftVal").textContent = `${(minLift * 100).toFixed(1).replace(/\.0$/, "")}%`;
-  });
+  function showLift() { $("liftVal").textContent = `${(minLift * 100).toFixed(1).replace(/\.0$/, "")}%`; }
+  $("lift").addEventListener("input", e => { minLift = Number(e.target.value); showLift(); });
   checkBtn.addEventListener("click", () => checking ? stopCheck() : startCheck());
 
   // ---------- Buttons ----------
