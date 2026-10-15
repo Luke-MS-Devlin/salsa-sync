@@ -71,7 +71,12 @@
     .menuTitle { grid-column:1 / 4; text-align:center; font-size:clamp(1rem, 4vmin, 2rem); font-weight:800; text-shadow:0 2px 8px #000; }
     .tile { --p:0%; font-size:clamp(1rem, 4.5vmin, 2.4rem); font-weight:800; border:3px solid #fff8; border-radius:16px; color:#fff;
             background:linear-gradient(to top, #2fb877 var(--p), #000b var(--p)); padding:6px; }
-    .tile[hidden] { display:none; }
+    .tile[hidden], .menuLabel[hidden] { display:none; }
+    .tile.big { font-size:clamp(2.4rem, 12vmin, 5rem); line-height:1; }
+    /* The setting's name and value sit between its − and + tiles, so each tile is just one big symbol. */
+    .menuLabel { grid-column:2; align-self:center; text-align:center; font-size:clamp(1rem, 5vmin, 2.4rem); font-weight:800;
+                 text-shadow:0 2px 8px #000; }
+    .menuLabel b { display:block; font-size:1.3em; color:#ffd56a; }
     .tile b { display:block; font-size:.8em; color:#ffd56a; }
     .tile.left { grid-column:1; } .tile.right { grid-column:3; }
     .hand { position:absolute; width:34px; height:34px; margin:-17px 0 0 -17px; border:4px solid #ffd56a; border-radius:50%;
@@ -99,9 +104,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.18</small></h1>
+    <h1>Salsa Sync <small id="version">v2.19</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -130,11 +135,13 @@
         <button class="tile right" data-page="main" data-act="check">👣 Step check</button>
         <button class="tile left" data-page="main" data-act="settings">⚙ Settings <b><span class="tTempo">160</span> · <span class="tLen">30 s</span></b></button>
         <button class="tile right" data-page="main" data-act="close">✕ Close</button>
-        <button class="tile left" data-page="settings" data-act="tempo-">− Tempo <b class="tTempo">160</b></button>
-        <button class="tile right" data-page="settings" data-act="tempo+">+ Tempo <b class="tTempo">160</b></button>
-        <button class="tile left" data-page="settings" data-act="length-">− Length <b class="tLen">30 s</b></button>
-        <button class="tile right" data-page="settings" data-act="length+">+ Length <b class="tLen">30 s</b></button>
-        <button class="tile left" data-page="settings" data-act="sync">🎧 Sync audio <b id="tSync">0 ms</b></button>
+        <button class="tile left big" data-page="settings" data-act="tempo-" aria-label="Tempo down">−</button>
+        <div class="menuLabel" data-page="settings">Tempo<b class="tTempo">160</b></div>
+        <button class="tile right big" data-page="settings" data-act="tempo+" aria-label="Tempo up">+</button>
+        <button class="tile left big" data-page="settings" data-act="length-" aria-label="Length down">−</button>
+        <div class="menuLabel" data-page="settings">Length<b class="tLen">30 s</b></div>
+        <button class="tile right big" data-page="settings" data-act="length+" aria-label="Length up">+</button>
+        <button class="tile left" data-page="settings" data-act="sync">🎧 Sync <b id="tSync">0 ms</b></button>
         <button class="tile right" data-page="settings" data-act="back">← Back</button>
       </div>
       <div id="handL" class="hand" hidden></div><div id="handR" class="hand" hidden></div>
@@ -570,6 +577,7 @@
   // How your steps spread around the beat: a bar for every 20 ms, early on the left, late on the right.
   // The middle band is "on the beat". Steps more than 0.3 s out are piled into the end bars.
   const SPREAD_MS = 300, BIN_MS = 20;
+  const EARLY_COLOUR = "#b48cff", LATE_COLOUR = "#e0a040";   // purple = early (rushing), amber = late (dragging)
   function drawSpread(s) {
     const c = $("spreadChart"), r = s.report;
     c.hidden = r.onTimePct == null || !!r.unreliable;   // no chart when the steps couldn't be timed
@@ -582,15 +590,15 @@
     g.fillStyle = "#3ecf8e22"; g.fillRect(x(-ON_TIME_MS), top, x(ON_TIME_MS) - x(-ON_TIME_MS), base - top);   // on-the-beat band
     counts.forEach((n, i) => {
       const mid = -SPREAD_MS + (i + 0.5) * BIN_MS, bh = (n / most) * (base - top);
-      g.fillStyle = Math.abs(mid) <= ON_TIME_MS ? "#3ecf8e" : "#e0a040";
+      g.fillStyle = mid < -ON_TIME_MS ? EARLY_COLOUR : mid > ON_TIME_MS ? LATE_COLOUR : "#3ecf8e";
       g.fillRect(x(-SPREAD_MS + i * BIN_MS) + 1, base - bh, w / nBins - 2, bh);
     });
     g.strokeStyle = "#ffffff26"; g.lineWidth = 1;                           // a faint line every 100 ms
     for (let ms = -SPREAD_MS + 100; ms < SPREAD_MS; ms += 100) if (ms) { g.beginPath(); g.moveTo(x(ms), top); g.lineTo(x(ms), base); g.stroke(); }
     g.strokeStyle = "#999"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x(0), top); g.lineTo(x(0), base); g.stroke(); g.setLineDash([]);
     g.font = "12px system-ui"; g.textBaseline = "top";
-    g.fillStyle = "#e0a040"; g.textAlign = "left";  g.fillText(`Early ${r.earlyPct}%`, 4, 2);
-    g.textAlign = "right"; g.fillText(`Late ${r.latePct}%`, w - 4, 2);
+    g.fillStyle = EARLY_COLOUR; g.textAlign = "left";  g.fillText(`Early ${r.earlyPct}%`, 4, 2);
+    g.fillStyle = LATE_COLOUR;  g.textAlign = "right"; g.fillText(`Late ${r.latePct}%`, w - 4, 2);
     g.fillStyle = "#3ecf8e"; g.textAlign = "center"; g.fillText(`On the beat ${r.onTimePct}%`, x(0), 2);
     g.fillStyle = "#a0a0a0"; g.textBaseline = "bottom"; g.font = "11px system-ui";
     g.textAlign = "center";                                                 // labels in ms: -200 ... beat ... +200
@@ -1040,7 +1048,7 @@
   let menuOpen = false, hover = { tile: null, since: 0, fired: false }, menuActiveAt = 0;
 
   function showMenuPage(page) {
-    tiles.forEach(t => t.hidden = t.dataset.page !== page);
+    document.querySelectorAll("#menu [data-page]").forEach(el => el.hidden = el.dataset.page !== page);
     $("menuTitle").textContent = page === "settings" ? "Settings: hold a hand over a button" : "Hold a hand over a button";
     if (hover.tile) hover.tile.style.setProperty("--p", "0%");
     hover = { tile: null, since: 0, fired: false };
