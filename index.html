@@ -104,16 +104,16 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.20</small></h1>
+    <h1>Salsa Sync <small id="version">v2.21</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
          then hold a hand over a button until it fills up. Raising both hands during a session or step check stops it.</p>
       <p>A session and step check both start with a body check: raise and lower your hands, then stand still for 3 seconds.
-         A session then plays a "3, 2, 1, Go!" countdown and two practice basics. A second, higher "3, 2, 1, Go!" means
-         the real thing starts on the next 1, and that part is recorded. Step check flashes L or R each time it sees a foot land.</p>
+         A session then counts you in with "5, 6, 7, 8" blips and you dance two practice basics, starting on the green 1.
+         A second, higher "5, 6, 7, 8" means the real thing starts on the next 1, and that part is recorded. Step check flashes L or R each time it sees a foot land.</p>
       <p>Bluetooth headphones and speakers play the music late, which makes every step look late. Run Audio sync in Settings
          (or from the menu) once for each pair of headphones or speakers: march on the spot to 16 clicks and it measures the delay.
          Filming from slightly to one side helps when your feet cross in front of each other.</p>
@@ -482,19 +482,13 @@
     return { yourBasicMs: yourMs, musicBasicMs: Math.round(basicMs), percent: Math.round((basicMs / yourMs - 1) * 100) };
   }
 
-  function tempoShort(tempo) {   // a few words for the big prompt
-    if (!tempo) return "Couldn't read your tempo";
-    if (Math.abs(tempo.percent) <= 3) return "Tempo spot on";
-    return tempo.percent > 0 ? `Rushing ${tempo.percent}%` : `Dragging ${-tempo.percent}%`;
-  }
-
   function tempoSentence(tempo) {
-    if (!tempo) return "I couldn't find a steady repeating basic to measure your tempo.";
+    if (!tempo) return "Speed: I couldn't tell this time. Your steps didn't settle into a repeating basic (the 8-beat salsa pattern), so dance it the whole way through.";
     const yours = (tempo.yourBasicMs / 1000).toFixed(2), music = (tempo.musicBasicMs / 1000).toFixed(2);
-    if (Math.abs(tempo.percent) <= 3) return `Speed: spot on. Your basic took ${yours} s and the music's takes ${music} s.`;
+    if (Math.abs(tempo.percent) <= 3) return `Speed: just right. One basic (the 8-beat pattern) took you ${yours} s, and the music's takes ${music} s.`;
     return tempo.percent > 0
-      ? `Speed: you're rushing. Your basic took ${yours} s but the music's takes ${music} s, so you're ${tempo.percent}% too fast.`
-      : `Speed: you're dragging. Your basic took ${yours} s but the music's takes ${music} s, so you're ${-tempo.percent}% too slow.`;
+      ? `Speed: too fast. One basic (the 8-beat pattern) took you ${yours} s, but the music's takes ${music} s. Slow down a little.`
+      : `Speed: too slow. One basic (the 8-beat pattern) took you ${yours} s, but the music's takes ${music} s. Speed up a little.`;
   }
 
   // How close your landings were to the beat. An average would let early and late steps cancel out (half 100 ms
@@ -502,7 +496,7 @@
   // early, on the beat (within ON_TIME_MS), or late. Plus your habit (the middle offset): do you tend to land early or late?
   function timingReport(steps, nBeats) {
     if (steps.length < Math.max(4, nBeats * 0.3)) {
-      return { steps: steps.length, text: "Timing: I couldn't see enough clear foot lifts to time them." };
+      return { steps: steps.length, text: "Timing: I couldn't see enough of your steps to time them. Keep both feet in view and lift them a little as you step." };
     }
     const offsets = steps.map(s => s.offset).sort((a, b) => a - b);
     const misses = offsets.map(Math.abs).sort((a, b) => a - b);
@@ -514,31 +508,29 @@
     const result = { steps: steps.length, habitMs: habit, typicalMissMs: typicalMiss, earlyPct, onTimePct, latePct };
     // Misses this big mean the steps were spread right across the beat: either you drifted off tempo (the tempo
     // score will say so) or your steps were too small to time, e.g. salsa filmed from the front.
-    if (typicalMiss > 120) return { ...result, unreliable: true, text: "Timing: I couldn't time your individual steps reliably this time, so go by the speed score." };
-    const tendency = habit < -30 ? `You tend to land a little early (about ${-habit} ms).`
-                   : habit > 30  ? `You tend to land a little late (about ${habit} ms).`
-                   : "No early or late habit.";
-    return { ...result, good: onTimePct >= 60, text: `Timing: ${onTimePct}% landed on the beat (within ${ON_TIME_MS / 1000} s), ${earlyPct}% early and ${latePct}% late. ${tendency}` };
+    if (typicalMiss > 120) return { ...result, unreliable: true, text: "Timing: your steps were too spread out around the beats for me to score. Try a slower tempo and step with the cowbell." };
+    const tendency = habit < -30 ? " Overall you tend to step a little early."
+                   : habit > 30  ? " Overall you tend to step a little late."
+                   : "";
+    return { ...result, good: onTimePct >= 60, text: `Timing: ${onTimePct}% of your steps landed on the beat, ${earlyPct}% were early and ${latePct}% were late.${tendency}` };
   }
 
   // Right beats: are you stepping on the right beats? A salsa basic is 6 steps in 8 beats, with pauses on the 4 and 8
   // (in both LA "On1" and New York "On2" style). Being on the beat but a count over (say pausing on 1 and 5) still
   // scores well for timing, so this checks it separately: which pair of beats, 4 apart, has the fewest steps?
-  const BEAT_NAMES = ["", "one", "two", "three", "four", "five", "six", "seven", "eight"];
   function rightBeats(steps, realBeats) {
     const rate = c => steps.filter(st => st.count === c).length / Math.max(1, realBeats.filter(b => b.count === c).length);
     const pairs = [1, 2, 3, 4].map(p => ({ p, rate: (rate(p) + rate(p + 4)) / 2 }));
     const pause = pairs.reduce((a, b) => (b.rate < a.rate ? b : a));
     const others = pairs.filter(x => x !== pause).reduce((sum, x) => sum + x.rate, 0) / 3;
     if (realBeats.length < 16 || pause.rate > 0.3 || others < 0.6) {   // no clear quick-quick-slow pattern (or a march)
-      return { pauses: null, text: "Right beats: I couldn't see a clear pause in your basic, so I can't check which beats you started on." };
+      return { pauses: null, text: "Right beats: I couldn't check this time. A salsa basic is 6 steps with pauses on 4 and 8, and I tell which beats you used from where you pause. Your pauses weren't clear enough to spot." };
     }
     const late = pause.p % 4;   // pausing on 1 and 5 = one beat late, 2 and 6 = two, 3 and 7 = one early
-    const where = `Your pauses fell on ${pause.p} and ${pause.p + 4}`;
-    if (late === 0) return { pauses: [4, 8], good: true, text: "Right beats: yes. You paused on 4 and 8 and started each half on the 1 and the 5." };
+    if (late === 0) return { pauses: [4, 8], good: true, text: "Right beats: yes. You stepped on 1, 2, 3 and 5, 6, 7 and paused on 4 and 8." };
     const off = late === 1 ? "one beat late" : late === 2 ? "two beats off" : "one beat early";
     return { pauses: [pause.p, pause.p + 4], beatsOff: late === 3 ? -1 : late, good: false,
-             text: `Right beats: not yet. ${where}, but they go on 4 and 8, so you're ${off}. Take your first step on the 1, straight after the 8.` };
+             text: `Right beats: not yet. You paused on ${pause.p} and ${pause.p + 4}, but the pauses go on 4 and 8, so you're ${off}. Take your first step on the 1, straight after the count-in.` };
   }
 
   // ---------- Charts ----------
@@ -699,13 +691,14 @@
     const offsets = detectSteps({ ...s, audioDelayMs: 0 }).map(st => st.offset).sort((a, b) => a - b);
     const at = q => offsets[Math.floor(q * (offsets.length - 1))];
     let note;
-    if (offsets.length < SYNC_BEATS / 2) note = `Couldn't see enough steps to measure the audio delay, so it stays at ${audioDelay} ms.`;
-    else if (at(0.75) - at(0.25) > 160) note = `Your march steps were too spread out to trust, so the audio delay stays at ${audioDelay} ms.`;
-    else { setDelay(Math.max(0, at(0.5))); note = `Audio delay set to ${audioDelay} ms (from ${offsets.length} steps).`; }
+    let ok = false;
+    if (offsets.length < SYNC_BEATS / 2) note = `Audio sync didn't work: I couldn't see enough of your steps. The delay stays at ${audioDelay} ms. Try again with both feet in view.`;
+    else if (at(0.75) - at(0.25) > 160) note = `Audio sync didn't work: your steps weren't steady enough to measure. The delay stays at ${audioDelay} ms. Try again, stepping exactly with each click.`;
+    else { setDelay(Math.max(0, at(0.5))); ok = true; note = `Audio sync done. Sound reaches you about ${audioDelay} ms late on this device, and I'll allow for that.`; }
     $("syncNote").textContent = note;
     $("rcText").textContent = note; $("resultCard").hidden = false; updateTiles();
-    showPrompt(note.startsWith("Audio delay set") ? "Synced" : "Sync didn't work", note.startsWith("Audio delay set") ? "green" : "red",
-      { sub: `delay ${audioDelay} ms`, say: note.split(" (")[0].replace(/ms/, "milliseconds"), important: true, hideAfter: 6000 });
+    showPrompt(ok ? "Synced" : "Sync didn't work", ok ? "green" : "red",
+      { sub: `delay ${audioDelay} ms`, say: "Done. Your result is on the screen.", important: true, hideAfter: 4000 });
   }
 
   // ---------- Session ----------
@@ -763,7 +756,7 @@
     };
     statusEl.textContent = sync ? `Audio sync: after the countdown, march on the spot, one step on every click (${SYNC_BEATS} clicks)`
       : `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${bpm} BPM)`;
-    speak(sync ? "March on the spot, one step on every click." : "Get ready. Five, six, seven, eight, then step on the one.");
+    speak(sync ? "March on the spot, one step on every click." : "Get ready.");
     sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
@@ -837,8 +830,7 @@
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
     $("results").hidden = false;
     $("rcText").textContent = $("feedback").textContent; $("resultCard").hidden = false;   // the result, on the video
-    const sayOne = !s.rightBeats.pauses ? "" : s.rightBeats.good ? " And you were on the one." : ` But your pauses were on ${BEAT_NAMES[s.rightBeats.pauses[0]]} and ${BEAT_NAMES[s.rightBeats.pauses[1]]}, not four and eight.`;
-    showPrompt("Done!", "green", { sub: tempoShort(s.tempo), say: tempoSentence(s.tempo) + sayOne, important: true, hideAfter: 6000 });
+    showPrompt("Done!", "green", { sub: "Your results are on the screen", say: "Done. Your results are on the screen.", important: true, hideAfter: 4000 });
     drawSession(s); drawSpread(s);
   }
 
