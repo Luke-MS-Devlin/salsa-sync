@@ -65,12 +65,13 @@
     .fullBtn { position:absolute; right:10px; bottom:10px; padding:6px 12px; background:#000a; border-color:#555; }
     .stage.full { position:fixed; inset:0; z-index:20; height:auto; border-radius:0; }
     /* Air-button menu: big tiles down the left and right edges, so you can reach them with your arms out. */
-    .menu { position:absolute; inset:0; display:grid; grid-template-columns:1fr 1.3fr 1fr; grid-template-rows:auto 1fr 1fr 1fr 1fr;
+    .menu { position:absolute; inset:0; display:grid; grid-template-columns:1fr 1.3fr 1fr; grid-template-rows:auto; grid-auto-rows:1fr;
             gap:10px; padding:12px; background:#0006; }
     .menu[hidden] { display:none; }
     .menuTitle { grid-column:1 / 4; text-align:center; font-size:clamp(1rem, 4vmin, 2rem); font-weight:800; text-shadow:0 2px 8px #000; }
     .tile { --p:0%; font-size:clamp(1rem, 4.5vmin, 2.4rem); font-weight:800; border:3px solid #fff8; border-radius:16px; color:#fff;
             background:linear-gradient(to top, #2fb877 var(--p), #000b var(--p)); padding:6px; }
+    .tile[hidden] { display:none; }
     .tile b { display:block; font-size:.8em; color:#ffd56a; }
     .tile.left { grid-column:1; } .tile.right { grid-column:3; }
     .hand { position:absolute; width:34px; height:34px; margin:-17px 0 0 -17px; border:4px solid #ffd56a; border-radius:50%;
@@ -98,9 +99,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.17</small></h1>
+    <h1>Salsa Sync <small id="version">v2.18</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -124,15 +125,17 @@
       <div id="prompt" class="prompt"></div>
       <div id="resultCard" class="resultCard" hidden><button id="rcClose">✕</button><span id="rcText"></span></div>
       <div id="menu" class="menu" hidden>
-        <div class="menuTitle">Hold a hand over a button</div>
-        <button class="tile left" data-act="session">▶ Session</button>
-        <button class="tile right" data-act="check">👣 Step check</button>
-        <button class="tile left" data-act="tempo-">− Tempo <b class="tTempo">160</b></button>
-        <button class="tile right" data-act="tempo+">+ Tempo <b class="tTempo">160</b></button>
-        <button class="tile left" data-act="length-">− Length <b class="tLen">30 s</b></button>
-        <button class="tile right" data-act="length+">+ Length <b class="tLen">30 s</b></button>
-        <button class="tile left" data-act="sync">🎧 Sync audio <b id="tSync">0 ms</b></button>
-        <button class="tile right" data-act="close">✕ Close</button>
+        <div class="menuTitle" id="menuTitle">Hold a hand over a button</div>
+        <button class="tile left" data-page="main" data-act="session">▶ Session</button>
+        <button class="tile right" data-page="main" data-act="check">👣 Step check</button>
+        <button class="tile left" data-page="main" data-act="settings">⚙ Settings <b><span class="tTempo">160</span> · <span class="tLen">30 s</span></b></button>
+        <button class="tile right" data-page="main" data-act="close">✕ Close</button>
+        <button class="tile left" data-page="settings" data-act="tempo-">− Tempo <b class="tTempo">160</b></button>
+        <button class="tile right" data-page="settings" data-act="tempo+">+ Tempo <b class="tTempo">160</b></button>
+        <button class="tile left" data-page="settings" data-act="length-">− Length <b class="tLen">30 s</b></button>
+        <button class="tile right" data-page="settings" data-act="length+">+ Length <b class="tLen">30 s</b></button>
+        <button class="tile left" data-page="settings" data-act="sync">🎧 Sync audio <b id="tSync">0 ms</b></button>
+        <button class="tile right" data-page="settings" data-act="back">← Back</button>
       </div>
       <div id="handL" class="hand" hidden></div><div id="handR" class="hand" hidden></div>
       <button id="fullBtn" class="fullBtn">⛶ Full screen</button>
@@ -342,14 +345,21 @@
   //   2. Floor = lowest the ankle has been in the last 1.5 s. Lift = how far above that it is, in leg-lengths.
   //   3. Up once it passes minLift AND is at least half that higher than the other foot (and the other foot isn't up).
   //      (In salsa one foot always stays down, so both rising together is body movement, not a step.)
-  //   4. Landed once it falls back to half its highest point.
-  //   5. After landing it must drop back below the line before it can count again, so one high lift isn't two steps.
-  // Tested on a marching recording (75 of 80 steps) and a 160 BPM salsa session (58 of 60 clear lifts, none extra).
+  //   4. Landed once it falls back to half its highest point, OR once the other foot clearly lifts (one foot is
+  //      always down, so if the other one is up, this one must have landed). Forward and back steps move where the
+  //      foot rests in the picture, so a planted foot can look "still a bit up" and would otherwise block the other.
+  //      Then the landing time is when this foot was lowest.
+  //   5. After landing it can't count again until it drops back below the line, or the other foot has stepped
+  //      (and 0.2 s has passed), so one high lift isn't two steps.
+  //   6. When matching to the music, at most one step per beat (the closest).
+  // Tested on a marching recording (74 of 80 steps) and two 160 BPM salsa sessions (60 and 61 steps, 60 in a perfect basic).
   const MIN_LIFT = 0.04;        // a lift must rise at least this many leg-lengths off the floor (default)
   let minLift = MIN_LIFT;       // set by calibration or the "Lift needed" slider
+  const REARM_MS = 200;         // rule 5: a foot can count again this soon after landing, once the other foot has stepped
   const FLOOR_WINDOW = 1500;    // ms of history used to find where the foot rests on the floor
   const ON_TIME_MS = 80;        // a landing within this many ms of the beat counts as on the beat
-  const resetFoot = () => ({ leg: 0, recent: [], up: false, armed: true, peak: 0, count: 0 });
+  // low/lowT: the lowest lift since the peak, and when. otherSeen: the other foot's step count when this foot last landed.
+  const resetFoot = () => ({ leg: 0, recent: [], up: false, armed: true, peak: 0, count: 0, low: 0, lowT: 0, landedT: -1e9, otherSeen: 0 });
 
   // Rules 1 and 2: how high each foot is off its floor this frame. pt(i) gives body point i as {x, y}.
   function footLifts(feet, pt, t) {
@@ -368,16 +378,22 @@
     return row;
   }
 
-  // Rules 3 to 5. Returns the feet that landed this frame and how high each one got.
+  // Rules 3 to 5. Returns the feet that landed this frame and how high each one got (plus the time, for rule 4's
+  // "other foot lifted" landings, which happened a little before this frame).
   function stepRules(feet, row) {
     const landed = [];
+    const land = (f, o, t) => { f.up = false; f.armed = false; f.count++; f.landedT = t; f.otherSeen = o.count; };
     for (const [foot, other] of [["left", "right"], ["right", "left"]]) {
-      const f = feet[foot], lift = row[foot];
-      if (!f.up && lift < minLift) f.armed = true;
-      if (!f.up && f.armed && !feet[other].up && lift >= minLift && lift - row[other] >= minLift / 2) { f.up = true; f.peak = lift; }
-      else if (f.up) {
-        f.peak = Math.max(f.peak, lift);
-        if (lift <= f.peak / 2) { f.up = false; f.armed = false; f.count++; landed.push({ foot, peak: f.peak }); }
+      const f = feet[foot], o = feet[other], lift = row[foot];
+      const clearlyUp = lift >= minLift && lift - row[other] >= minLift;
+      if (!f.up && (lift < minLift || (o.count > f.otherSeen && row.t - f.landedT > REARM_MS))) f.armed = true;   // rule 5
+      if (!f.up && f.armed && o.up && clearlyUp) { land(o, f, o.lowT); landed.push({ foot: other, peak: o.peak, t: o.lowT }); }   // rule 4b
+      if (!f.up && f.armed && !o.up && lift >= minLift && lift - row[other] >= minLift / 2) {   // rule 3
+        f.up = true; f.peak = f.low = lift; f.lowT = row.t;
+      } else if (f.up) {
+        if (lift > f.peak) { f.peak = f.low = lift; f.lowT = row.t; }
+        else if (lift < f.low) { f.low = lift; f.lowT = row.t; }
+        if (lift <= f.peak / 2) { land(f, o, row.t); landed.push({ foot, peak: f.peak }); }   // rule 4
       }
     }
     return landed;
@@ -395,7 +411,8 @@
         prev = null; continue;
       }
       const row = footLifts(feet, i => ({ x: fr.pts[i][0], y: fr.pts[i][1] }), fr.t);
-      for (const { foot, peak } of stepRules(feet, row)) {
+      for (const { foot, peak, t } of stepRules(feet, row)) {
+        if (t !== undefined) { steps.push({ t, foot }); continue; }   // rule 4b already knows when
         // The foot passed half its peak somewhere between the last frame and this one: estimate when.
         const half = peak / 2, before = prev?.[foot];
         const frac = before === undefined || before === row[foot] ? 1 : (before - half) / (before - row[foot]);
@@ -411,9 +428,14 @@
       let nearest = realBeats[0];
       for (const b of realBeats) if (Math.abs(heard(b) - step.t) < Math.abs(heard(nearest) - step.t)) nearest = b;
       const offset = step.t - heard(nearest);
-      if (Math.abs(offset) <= beatMs / 2) matched.push({ t: round(step.t, 1), foot: step.foot, count: nearest.count, offset: Math.round(offset) });
+      if (Math.abs(offset) > beatMs / 2) continue;
+      const m = { t: round(step.t, 1), foot: step.foot, count: nearest.count, offset: Math.round(offset), beat: nearest.t };
+      // One step per beat: if two landings matched the same beat, keep the one closer to it.
+      const last = matched[matched.length - 1];
+      if (last?.beat === m.beat) { if (Math.abs(m.offset) < Math.abs(last.offset)) matched[matched.length - 1] = m; }
+      else matched.push(m);
     }
-    return matched;
+    return matched.map(({ beat, ...m }) => m);
   }
 
   // ---------- Tempo score ----------
@@ -563,14 +585,17 @@
       g.fillStyle = Math.abs(mid) <= ON_TIME_MS ? "#3ecf8e" : "#e0a040";
       g.fillRect(x(-SPREAD_MS + i * BIN_MS) + 1, base - bh, w / nBins - 2, bh);
     });
+    g.strokeStyle = "#ffffff26"; g.lineWidth = 1;                           // a faint line every 100 ms
+    for (let ms = -SPREAD_MS + 100; ms < SPREAD_MS; ms += 100) if (ms) { g.beginPath(); g.moveTo(x(ms), top); g.lineTo(x(ms), base); g.stroke(); }
     g.strokeStyle = "#999"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x(0), top); g.lineTo(x(0), base); g.stroke(); g.setLineDash([]);
     g.font = "12px system-ui"; g.textBaseline = "top";
     g.fillStyle = "#e0a040"; g.textAlign = "left";  g.fillText(`Early ${r.earlyPct}%`, 4, 2);
     g.textAlign = "right"; g.fillText(`Late ${r.latePct}%`, w - 4, 2);
     g.fillStyle = "#3ecf8e"; g.textAlign = "center"; g.fillText(`On the beat ${r.onTimePct}%`, x(0), 2);
     g.fillStyle = "#a0a0a0"; g.textBaseline = "bottom"; g.font = "11px system-ui";
-    g.textAlign = "left"; g.fillText("0.3 s early", 4, h); g.textAlign = "right"; g.fillText("0.3 s late", w - 4, h);
-    g.textAlign = "center"; g.fillText("beat", x(0), h);
+    g.textAlign = "center";                                                 // labels in ms: -200 ... beat ... +200
+    for (let ms = -SPREAD_MS + 100; ms < SPREAD_MS; ms += 100) g.fillText(ms ? (ms > 0 ? "+" : "−") + Math.abs(ms) : "beat", x(ms), h);
+    g.textAlign = "left"; g.fillText("ms", 4, h);
   }
 
   // ---------- Rhythm (Web Audio) ----------
@@ -1008,13 +1033,22 @@
   // Raising both hands (when nothing is running) opens it. Your wrists are drawn as yellow rings; hold one over a
   // button for 1.5 s and it fills up green and fires. Move off and back on to press the same button again,
   // except plus and minus, which keep going up or down once a second while your hand stays there.
+  // Two pages, so it isn't crowded: the main page (session, step check, settings, close) and a settings page
+  // (tempo, length, audio sync, back).
   const DWELL_MS = 1500, REPEAT_MS = 1000, MENU_TIMEOUT_MS = 20000;
   const tiles = [...document.querySelectorAll(".tile")];
   let menuOpen = false, hover = { tile: null, since: 0, fired: false }, menuActiveAt = 0;
 
+  function showMenuPage(page) {
+    tiles.forEach(t => t.hidden = t.dataset.page !== page);
+    $("menuTitle").textContent = page === "settings" ? "Settings: hold a hand over a button" : "Hold a hand over a button";
+    if (hover.tile) hover.tile.style.setProperty("--p", "0%");
+    hover = { tile: null, since: 0, fired: false };
+  }
+
   function openMenu() {
     menuOpen = true; $("menu").hidden = false; $("resultCard").hidden = true; menuActiveAt = performance.now();
-    showPrompt(null); updateTiles(); speak("Menu. Hold a hand over a button.");
+    showMenuPage("main"); showPrompt(null); updateTiles(); speak("Menu. Hold a hand over a button.");
   }
   function closeMenu() {
     menuOpen = false; $("menu").hidden = true; $("handL").hidden = $("handR").hidden = true;
@@ -1035,6 +1069,8 @@
     else if (act.startsWith("tempo")) { step($("bpm"), act.endsWith("+") ? 1 : -1); speak(`Tempo ${$("bpm").value}`); }
     else if (act.startsWith("length")) { step($("dur"), act.endsWith("+") ? 1 : -1); speak(`${$("dur").value} seconds`); }
     else if (act === "sync") { closeMenu(); startSync(); }
+    else if (act === "settings") { showMenuPage("settings"); speak("Settings."); }
+    else if (act === "back") showMenuPage("main");
     else closeMenu();
     updateTiles();
   }
@@ -1052,6 +1088,7 @@
       const x = x0 + (mirror ? 1 - lm[i].x : lm[i].x) * vw * scale, y = y0 + lm[i].y * vh * scale;
       ring.hidden = false; ring.style.left = x + "px"; ring.style.top = y + "px";
       for (const tile of tiles) {
+        if (tile.hidden) continue;
         const r = tile.getBoundingClientRect(), left = r.left - box.left, top = r.top - box.top;
         if (x >= left && x <= left + r.width && y >= top && y <= top + r.height) over = tile;
       }
