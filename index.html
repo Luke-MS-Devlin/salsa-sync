@@ -569,7 +569,7 @@
       `${s.bpm} BPM · ${nBeats} beats · ${s.steps.length} steps found · ${s.frames.length} frames ` +
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
     $("results").hidden = false;
-    showPrompt("Done!", "green", { sub: tempoShort(s.tempo), say: tempoSentence(s.tempo), hideAfter: 6000 });
+    showPrompt("Done!", "green", { sub: tempoShort(s.tempo), say: tempoSentence(s.tempo), important: true, hideAfter: 6000 });
     drawSession(s);
     $("results").scrollIntoView({ behavior: "smooth" });
   }
@@ -632,7 +632,7 @@
   function stopCheck() {
     checking = false; master.disconnect();
     const n = feet.left.count + feet.right.count;
-    showPrompt("Stopped", "", { sub: `L ${feet.left.count} · R ${feet.right.count}`, say: `Stopped. ${n} steps.`, hideAfter: 4000 });
+    showPrompt("Stopped", "", { sub: `L ${feet.left.count} · R ${feet.right.count}`, say: `Stopped. ${n} steps.`, important: true, hideAfter: 4000 });
     $("feet").hidden = true;
     checkBtn.textContent = "Step check"; sessionBtn.disabled = !running;
     $("liveLegend").innerHTML = `Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.`;
@@ -741,7 +741,7 @@
   // showPrompt is called every frame, so it only does something when the message changes.
   // quiet: a hint that waits until any timed message (like "Stopped") has finished.
   let promptKey = "", promptTimer = null, promptBusyUntil = 0;
-  function showPrompt(text, tone = "", { sub = "", say = null, hideAfter = 0, quiet = false } = {}) {
+  function showPrompt(text, tone = "", { sub = "", say = null, important = false, hideAfter = 0, quiet = false } = {}) {
     const key = text === null ? "none" : `${tone}|${text}|${sub}`;
     if (key === promptKey || (quiet && performance.now() < promptBusyUntil)) return;
     promptKey = key; clearTimeout(promptTimer); promptBusyUntil = 0;
@@ -750,7 +750,7 @@
     el.className = `prompt show ${tone}`;
     el.textContent = text;
     if (sub) { const small = document.createElement("small"); small.textContent = sub; el.append(small); }
-    if (say) speak(say);
+    if (say) speak(say, { important });
     if (hideAfter) {
       promptBusyUntil = performance.now() + hideAfter;
       promptTimer = setTimeout(() => el.classList.remove("show"), hideAfter);   // key stays, so it doesn't pop back up
@@ -758,13 +758,21 @@
   }
 
   // The browser's built-in text-to-speech: works on phones and laptops, no install or AI service.
-  let lastSaid = "", lastSaidAt = 0;
-  function speak(text) {
+  // important: results and summaries. Nothing interrupts them; other lines are skipped until they finish.
+  // Other lines replace each other, because only the latest state matters ("step back" is stale once you're back).
+  let lastSaid = "", lastSaidAt = 0, importantUntil = 0;
+  function speak(text, { important = false } = {}) {
     if (!$("voice").checked || !window.speechSynthesis) return;
+    if (!important && performance.now() < importantUntil) return;            // let the result finish
     if (text === lastSaid && performance.now() - lastSaidAt < 5000) return;   // don't nag
     lastSaid = text; lastSaidAt = performance.now();
     speechSynthesis.cancel();
-    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    const u = new SpeechSynthesisUtterance(text);
+    if (important) {
+      importantUntil = performance.now() + 2000 + text.length * 90;            // backup in case "end" never fires
+      u.onend = u.onerror = () => { importantUntil = 0; };
+    }
+    speechSynthesis.speak(u);
   }
 
   // ---------- Hands up to start / stop ----------
