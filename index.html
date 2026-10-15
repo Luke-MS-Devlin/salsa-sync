@@ -44,8 +44,8 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see -->
-  <h1>Salsa Sync <small id="version">v2.8</small></h1>
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps -->
+  <h1>Salsa Sync <small id="version">v2.9</small></h1>
   <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
      then start a session. You get 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
      A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.</p>
@@ -587,16 +587,19 @@
       return;
     }
     const row = { t };
-    for (const [foot, hip, ankle] of [["left", 23, 27], ["right", 24, 28]]) {
+    for (const [foot, hip, knee, ankle] of [["left", 23, 25, 27], ["right", 24, 26, 28]]) {
       const f = feet[foot];
-      // 1. Ankle height in leg-lengths (leg length smoothed over recent frames).
-      const leg = Math.hypot(lm[hip].x - lm[ankle].x, lm[hip].y - lm[ankle].y);
+      // 1. Leg length = thigh + shin, which stays the same when you bend your knees
+      //    (the straight hip-to-ankle distance shrinks when you squat). Smoothed over recent frames.
+      const dist = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
+      const leg = dist(hip, knee) + dist(knee, ankle);
       f.leg = f.leg ? 0.95 * f.leg + 0.05 * leg : leg;
-      const height = (1 - lm[ankle].y) / f.leg;
-      // 2. Floor = lowest height in the last 1.5 s.
+      // 2. Floor = lowest the ankle has been in the last 1.5 s. Lift = how far above that it is, in leg-lengths.
+      //    Only the lift is divided by leg length, so an ankle that doesn't move always reads 0.
+      const height = 1 - lm[ankle].y;
       f.recent.push({ t, height });
       while (t - f.recent[0].t > 2 * FLOOR_WINDOW) f.recent.shift();
-      const lift = height - Math.min(...f.recent.map(r => r.height));
+      const lift = (height - Math.min(...f.recent.map(r => r.height))) / f.leg;
       // 3. Up once the lift passes minLift. 4. Landed once it falls back to half the highest point.
       if (!f.up && lift >= minLift) { f.up = true; f.peak = lift; }
       else if (f.up) {
