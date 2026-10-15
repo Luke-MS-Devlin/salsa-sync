@@ -89,9 +89,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.13</small></h1>
+    <h1>Salsa Sync <small id="version">v2.14</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -306,43 +306,76 @@
   const round = (v, dp = 4) => Math.round(v * 10 ** dp) / 10 ** dp;
 
   // ---------- Step detection ----------
-  // Turns ankle movement into foot-landing times, then compares each landing with its nearest beat.
-  // Tuned on a marching test: 78 of 80 steps found, landings within ±50 ms of the beat 71% of the time.
+  // One set of rules, used live by step check and afterwards on a recorded session, so both count the same steps.
+  // Per foot, every frame:
+  //   1. Leg length = thigh + shin, which stays the same when you bend your knees (smoothed over recent frames).
+  //   2. Floor = lowest the ankle has been in the last 1.5 s. Lift = how far above that it is, in leg-lengths.
+  //   3. Up once it passes minLift AND is at least half that higher than the other foot (and the other foot isn't up).
+  //      (In salsa one foot always stays down, so both rising together is body movement, not a step.)
+  //   4. Landed once it falls back to half its highest point.
+  //   5. After landing it must drop back below the line before it can count again, so one high lift isn't two steps.
+  // Tested on a marching recording (75 of 80 steps) and a 160 BPM salsa session (58 of 60 clear lifts, none extra).
   const MIN_LIFT = 0.04;        // a lift must rise at least this many leg-lengths off the floor (default)
-  let minLift = MIN_LIFT;       // set by the "Lift needed" slider, used by both step check and sessions
-  const FLOOR_WINDOW = 750;     // ms either side used to find where the foot rests on the floor
+  let minLift = MIN_LIFT;       // set by calibration or the "Lift needed" slider
+  const FLOOR_WINDOW = 1500;    // ms of history used to find where the foot rests on the floor
   const ON_TIME_MS = 50;        // a landing within this many ms of the beat counts as on time
+  const resetFoot = () => ({ leg: 0, recent: [], up: false, armed: true, peak: 0, count: 0 });
 
-  function detectSteps(s) {
-    const frames = s.frames, t = frames.map(f => f.t);
-    const realBeats = s.beats.filter(b => !b.countIn && !b.practice);
-    const beatMs = 60000 / s.bpm;
-    const steps = [];
-    for (const [foot, hip, ankle] of [["left", 23, 27], ["right", 24, 28]]) {
-      // 1. Ankle height in leg-lengths (hip-to-ankle distance), so it doesn't depend on distance from the camera.
-      const legs = frames.map(f => Math.hypot(f.pts[hip][0] - f.pts[ankle][0], f.pts[hip][1] - f.pts[ankle][1])).sort((a, b) => a - b);
-      const leg = legs[Math.floor(legs.length / 2)];   // median
-      const height = frames.map(f => (1 - f.pts[ankle][1]) / leg);
-      // 2. Height off the floor: subtract the lowest height nearby (where the foot rests).
-      const lift = height.map((h, i) => {
-        let floor = h;
-        for (let j = 0; j < t.length; j++) if (Math.abs(t[j] - t[i]) < FLOOR_WINDOW) floor = Math.min(floor, height[j]);
-        return h - floor;
-      });
-      // 3. Each peak higher than minLift is a lift. 4. It lands when it gets back down to half the peak height.
-      for (let i = 1; i < t.length - 1; i++) {
-        if (lift[i] < minLift || lift[i] < lift[i - 1] || lift[i] < lift[i + 1]) continue;
-        const half = lift[i] / 2;
-        let j = i;
-        while (j < t.length - 1 && lift[j] > half) j++;
-        const frac = lift[j - 1] === lift[j] ? 0 : (lift[j - 1] - half) / (lift[j - 1] - lift[j]);
-        steps.push({ t: t[j - 1] + frac * (t[j] - t[j - 1]), foot });   // interpolate between the two frames
-        i = j;
+  // Rules 1 and 2: how high each foot is off its floor this frame. pt(i) gives body point i as {x, y}.
+  function footLifts(feet, pt, t) {
+    const row = { t };
+    for (const [foot, hip, knee, ankle] of [["left", 23, 25, 27], ["right", 24, 26, 28]]) {
+      const f = feet[foot];
+      const dist = (a, b) => Math.hypot(pt(a).x - pt(b).x, pt(a).y - pt(b).y);
+      const leg = dist(hip, knee) + dist(knee, ankle);
+      f.leg = f.leg ? 0.95 * f.leg + 0.05 * leg : leg;
+      // Only the lift is divided by leg length, so an ankle that doesn't move always reads 0.
+      const height = 1 - pt(ankle).y;
+      f.recent.push({ t, height });
+      while (t - f.recent[0].t > FLOOR_WINDOW) f.recent.shift();
+      row[foot] = (height - Math.min(...f.recent.map(r => r.height))) / f.leg;
+    }
+    return row;
+  }
+
+  // Rules 3 to 5. Returns the feet that landed this frame and how high each one got.
+  function stepRules(feet, row) {
+    const landed = [];
+    for (const [foot, other] of [["left", "right"], ["right", "left"]]) {
+      const f = feet[foot], lift = row[foot];
+      if (!f.up && lift < minLift) f.armed = true;
+      if (!f.up && f.armed && !feet[other].up && lift >= minLift && lift - row[other] >= minLift / 2) { f.up = true; f.peak = lift; }
+      else if (f.up) {
+        f.peak = Math.max(f.peak, lift);
+        if (lift <= f.peak / 2) { f.up = false; f.armed = false; f.count++; landed.push({ foot, peak: f.peak }); }
       }
     }
-    // 5. Match each landing with its nearest beat. Negative offset = early (rushing), positive = late (dragging).
+    return landed;
+  }
+
+  // After a session: replay the recorded frames through the same rules, then match each landing with its nearest beat.
+  function detectSteps(s) {
+    const realBeats = s.beats.filter(b => !b.countIn && !b.practice);
+    const beatMs = 60000 / s.bpm;
+    const feet = { left: resetFoot(), right: resetFoot() }, steps = [];
+    let prev = null;
+    for (const fr of s.frames) {
+      if (!FOOT_POINTS.every(i => fr.pts[i][2] > 0.5)) {   // can't see both feet: count nothing, start the floor afresh
+        for (const f of Object.values(feet)) { f.up = false; f.recent = []; }
+        prev = null; continue;
+      }
+      const row = footLifts(feet, i => ({ x: fr.pts[i][0], y: fr.pts[i][1] }), fr.t);
+      for (const { foot, peak } of stepRules(feet, row)) {
+        // The foot passed half its peak somewhere between the last frame and this one: estimate when.
+        const half = peak / 2, before = prev?.[foot];
+        const frac = before === undefined || before === row[foot] ? 1 : (before - half) / (before - row[foot]);
+        steps.push({ t: prev ? prev.t + frac * (row.t - prev.t) : row.t, foot });
+      }
+      prev = row;
+    }
+    // Negative offset = early (rushing), positive = late (dragging).
     const matched = [];
-    for (const step of steps.sort((a, b) => a.t - b.t)) {
+    for (const step of steps) {
       let nearest = realBeats[0];
       for (const b of realBeats) if (Math.abs(b.t - step.t) < Math.abs(nearest.t - step.t)) nearest = b;
       const offset = step.t - nearest.t;
@@ -556,7 +589,7 @@
       beatClock,
     };
     statusEl.textContent = `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${bpm} BPM)`;
-    speak("Get into position.");
+    speak("Get ready.");
     sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
@@ -650,41 +683,40 @@
   }
 
   // ---------- Step check (live) ----------
-  // The same rules as detectSteps, run frame by frame so you see each step as it happens:
-  // a foot is "up" once it rises minLift above its floor, and it has landed when it drops back to half its peak.
-  // Two extra rules: only one foot can be up at a time, and it has to be clearly higher than the other foot
-  // (in salsa one foot always stays down, so both rising together is body movement, not a step).
+  // The step rules (see Step detection), run frame by frame so you see each step as it happens. A landing is only
+  // known once the foot is half way down, so the flash comes a moment after the step.
   // It starts with 3 s of standing still to measure how much the points wobble, and sets minLift from that.
   // That only begins once you've got into position and raised both hands, then put them down, to say you're ready.
-  // Differences from the session version: the floor and leg length only use the past (we can't see the future live),
-  // and a landing is only known once the foot is half way down, so the flash comes a moment after the step.
+  // A session runs the same calibration first (forSession), then hands over to the music.
   let checking = false;
   const checkHistory = [];
   const feet = {};
-  const resetFoot = () => ({ leg: 0, recent: [], up: false, armed: true, peak: 0, count: 0 });
   const CALIB_MS = 3000;
-  let calib = null;    // { ready, handsWereUp, start, maxDiff, done }
+  let calib = null;    // { forSession, ready, handsWereUp, start, maxDiff, done }
   let feetWereLost = false;
 
-  function startCheck() {
+  function startCheck(forSession = false) {
     if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
     audioCtx.resume();
     master = audioCtx.createGain(); master.connect(audioCtx.destination);
     feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0; $("resultCard").hidden = true;
-    calib = { ready: false, handsWereUp: false, start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
+    calib = { forSession, ready: false, handsWereUp: false, start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
     checking = true; feetWereLost = false;
-    $("feet").hidden = false; updateFeet();
-    checkBtn.textContent = "Stop step check"; sessionBtn.disabled = true;
+    $("feet").hidden = forSession; updateFeet();
+    if (forSession) { sessionBtn.textContent = "Cancel"; checkBtn.disabled = true; }
+    else { checkBtn.textContent = "Stop step check"; sessionBtn.disabled = true; }
     $("liveLegend").innerHTML = `Live lift off the floor (last 5 s): <b class="l">left</b> and <b class="r">right</b>.
       The dashed line is the lift needed to count as a step. Each landing flashes L or R and beeps.`;
   }
 
-  function stopCheck() {
+  // quiet: no "Stopped" message (used when a session's calibration ends or is cancelled)
+  function stopCheck({ quiet = false } = {}) {
     checking = false; master.disconnect();
     const n = feet.left.count + feet.right.count;
-    showPrompt("Stopped", "", { sub: `L ${feet.left.count} · R ${feet.right.count}`, say: `Stopped. ${n} steps.`, important: true, hideAfter: 4000 });
+    if (!quiet) showPrompt("Stopped", "", { sub: `L ${feet.left.count} · R ${feet.right.count}`, say: `Stopped. ${n} steps.`, important: true, hideAfter: 4000 });
     $("feet").hidden = true;
-    checkBtn.textContent = "Step check"; sessionBtn.disabled = !running;
+    checkBtn.textContent = "Step check"; checkBtn.disabled = !running;
+    sessionBtn.textContent = "Start session"; sessionBtn.disabled = !running;
     $("liveLegend").innerHTML = `Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.`;
   }
 
@@ -702,21 +734,7 @@
     }
     if (feetWereLost && calib.done) showPrompt(null);   // feet are back: clear the red warning
     feetWereLost = false;
-    const row = { t };
-    for (const [foot, hip, knee, ankle] of [["left", 23, 25, 27], ["right", 24, 26, 28]]) {
-      const f = feet[foot];
-      // 1. Leg length = thigh + shin, which stays the same when you bend your knees
-      //    (the straight hip-to-ankle distance shrinks when you squat). Smoothed over recent frames.
-      const dist = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
-      const leg = dist(hip, knee) + dist(knee, ankle);
-      f.leg = f.leg ? 0.95 * f.leg + 0.05 * leg : leg;
-      // 2. Floor = lowest the ankle has been in the last 1.5 s. Lift = how far above that it is, in leg-lengths.
-      //    Only the lift is divided by leg length, so an ankle that doesn't move always reads 0.
-      const height = 1 - lm[ankle].y;
-      f.recent.push({ t, height });
-      while (t - f.recent[0].t > 2 * FLOOR_WINDOW) f.recent.shift();
-      row[foot] = (height - Math.min(...f.recent.map(r => r.height))) / f.leg;
-    }
+    const row = footLifts(feet, i => lm[i], t);   // rules 1 and 2 (see Step detection)
     checkHistory.push(row);
     while (t - checkHistory[0].t > LIVE_WINDOW_MS) checkHistory.shift();
 
@@ -739,30 +757,22 @@
         return;
       }
       finishCalibration();
+      if (calib.forSession) {   // calibrated: start the music
+        stopCheck({ quiet: true }); showPrompt("Get ready", "amber", { sub: "Music starts in a moment", hideAfter: 1500 }); runSession(); return;
+      }
       showPrompt("Go! Start stepping", "green", { say: "Done. Start stepping.", hideAfter: 2500 });
     }
 
-    for (const [foot, other] of [["left", "right"], ["right", "left"]]) {
-      const f = feet[foot], lift = row[foot];
-      // 3. Up once it passes minLift AND is at least half that higher than the other foot (and the other foot isn't up).
-      //    (Requiring the full minLift gap missed real steps, because the standing foot also rises a little.)
-      // 4. Landed once it falls back to half its highest point.
-      // 5. After landing it must drop back below the line before it can count again, so one high lift isn't two steps.
-      if (!f.up && lift < minLift) f.armed = true;
-      if (!f.up && f.armed && !feet[other].up && lift >= minLift && lift - row[other] >= minLift / 2) { f.up = true; f.peak = lift; }
-      else if (f.up) {
-        f.peak = Math.max(f.peak, lift);
-        if (lift <= f.peak / 2) { f.up = false; f.armed = false; f.count++; landed(foot); }
-      }
-    }
+    for (const { foot } of stepRules(feet, row)) landed(foot);   // rules 3 to 5 (see Step detection)
     drawCheck(t);
   }
 
-  // Set the lift needed to twice the biggest wobble seen while standing still, kept between 2% and 6% of leg length.
+  // Set the lift needed to twice the biggest wobble seen while standing still, kept between 4% and 6% of leg length.
   function finishCalibration() {
     calib.done = true;
     const wobble = calib.maxDiff;
-    minLift = Math.min(0.06, Math.max(0.02, Math.round(2 * wobble / 0.005) * 0.005));
+    // Never below the default 4%: lower than that, the standing foot's wobble while dancing counted as extra steps.
+    minLift = Math.min(0.06, Math.max(MIN_LIFT, Math.round(2 * wobble / 0.005) * 0.005));
     $("lift").value = minLift; showLift();
     $("calibNote").textContent = `Calibrated: your feet wobbled up to ${(wobble * 100).toFixed(1)}% standing still` +
       (2 * wobble > 0.06 ? " (that's a lot – try better light or moving closer)." : ".");
@@ -842,6 +852,7 @@
     const seen = i => (lm[i].visibility ?? 0) > 0.5;
     const up = seen(NOSE) && [L_WRIST, R_WRIST].every(i => seen(i) && lm[i].y < lm[NOSE].y);
     if (!up) {
+      if (handsSince !== null) showPrompt(null);   // hands came down before the time was up: clear "Keep them up"
       handsSince = null; handsReady = true;
       if (checking && calib.handsWereUp) { calib.handsWereUp = false; calib.ready = true; }   // hands down: calibration starts
       return false;
@@ -850,11 +861,12 @@
     handsSince ??= t;
     const left = HANDS_MS - (t - handsSince);
     const waiting = checking && !calib.ready;
-    const action = session ? "stop the session" : waiting ? "start" : checking ? "stop step check" : "open the menu";
+    const action = session ? "stop the session" : waiting ? "start" : checking ? (calib.forSession ? "cancel" : "stop step check") : "open the menu";
     if (left > 0) { showPrompt("Keep them up…", "amber", { sub: `${Math.ceil(left / 1000)} · to ${action}` }); return true; }
     handsReady = false; handsSince = null;
     if (session) stopSession();
     else if (waiting) calib.handsWereUp = true;
+    else if (checking && calib.forSession) cancelCalibration();
     else if (checking) stopCheck();
     else openMenu();
     return true;
@@ -967,10 +979,19 @@
     try { await startCamera(); liveHistory.length = 0; } catch (err) { statusEl.textContent = "Camera error: " + err.message; }
   });
 
-  sessionBtn.addEventListener("click", () => session ? stopSession() : startSession().catch(err => {
-    statusEl.textContent = "Session error: " + err.message; session = null;
-    sessionBtn.disabled = false; sessionBtn.textContent = "Start session";
-  }));
+  // Start session = calibrate first (the same stand-still as step check), then the music. Pressing it again cancels.
+  function runSession() {
+    startSession().catch(err => {
+      statusEl.textContent = "Session error: " + err.message; session = null;
+      sessionBtn.disabled = false; sessionBtn.textContent = "Start session";
+    });
+  }
+  function cancelCalibration() { stopCheck({ quiet: true }); showPrompt("Cancelled", "", { hideAfter: 2000 }); }
+  sessionBtn.addEventListener("click", () => {
+    if (session) stopSession();
+    else if (checking && calib.forSession) cancelCalibration();
+    else startCheck(true);
+  });
 </script>
 </body>
 </html>
