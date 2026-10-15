@@ -8,7 +8,16 @@
     :root { --bg:#111; --panel:#1b1b1b; --fg:#f2f2f2; --muted:#a0a0a0; --left:#4ea1ff; --right:#ff5a5f; --ok:#3ecf8e; }
     * { box-sizing: border-box; }
     body { margin:0; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    main { max-width:720px; margin:0 auto; padding:16px; }
+    main { max-width:1200px; margin:0 auto; padding:10px 12px; }
+    header { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+    details > summary { cursor:pointer; color:var(--muted); font-size:.9rem; }
+    details.help p { margin:6px 0 0; max-width:640px; }
+    /* One screen: the video takes most of it. On a laptop (wide and landscape), controls go to the right. */
+    .layout { display:grid; gap:10px; }
+    .side { display:flex; flex-direction:column; gap:8px; min-width:0; }
+    .side .controls { margin:0; }
+    .settings label { font-size:.85rem; }
+    .settings select, .settings input { font-size:.85rem; }
     h1 { font-size:1.3rem; margin:0 0 4px; }
     h1 small { font-size:.75rem; font-weight:400; color:var(--muted); margin-left:6px; }
     h2 { font-size:1.1rem; margin:20px 0 6px; }
@@ -18,7 +27,7 @@
     button, select { font:inherit; padding:10px 14px; border-radius:8px; border:1px solid #333; background:#222; color:var(--fg); }
     button.primary { background:var(--right); border-color:var(--right); color:#fff; }
     button:disabled { opacity:.45; }
-    .stage { position:relative; width:100%; aspect-ratio:3/4; background:#000; border-radius:12px; overflow:hidden; }
+    .stage { position:relative; width:100%; height:60vh; height:60svh; background:#000; border-radius:12px; overflow:hidden; }
     video, #overlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
     .mirror { transform:scaleX(-1); }
     .count { position:absolute; top:10px; right:14px; font-size:3.2rem; font-weight:800; color:#fff; text-shadow:0 2px 8px #000; }
@@ -26,7 +35,7 @@
     .count.go { color:var(--ok); }
     .phase { position:absolute; top:72px; right:14px; font-size:1.3rem; font-weight:700; color:#fff; text-shadow:0 2px 8px #000; text-align:right; }
     .phase.cue { color:var(--ok); font-size:1.7rem; }
-    #status { margin:10px 0 6px; font-weight:600; }
+    #status { font-weight:600; font-size:.9rem; }
     canvas.chart { height:150px; background:var(--panel); border-radius:8px; display:block; }
     #live { width:100%; }
     .scroll { overflow-x:auto; border-radius:8px; }
@@ -45,77 +54,115 @@
     .prompt.red { background:#e5484dee; }
     .prompt small { display:block; font-size:.42em; font-weight:600; margin-top:.25em; }
     .fullBtn { position:absolute; right:10px; bottom:10px; padding:6px 12px; background:#000a; border-color:#555; }
-    .stage.full { position:fixed; inset:0; z-index:20; aspect-ratio:auto; border-radius:0; }
+    .stage.full { position:fixed; inset:0; z-index:20; height:auto; border-radius:0; }
+    /* Air-button menu: big tiles down the left and right edges, so you can reach them with your arms out. */
+    .menu { position:absolute; inset:0; display:grid; grid-template-columns:1fr 1.3fr 1fr; grid-template-rows:auto 1fr 1fr 1fr;
+            gap:10px; padding:12px; background:#0006; }
+    .menu[hidden] { display:none; }
+    .menuTitle { grid-column:1 / 4; text-align:center; font-size:clamp(1rem, 4vmin, 2rem); font-weight:800; text-shadow:0 2px 8px #000; }
+    .tile { --p:0%; font-size:clamp(1rem, 4.5vmin, 2.4rem); font-weight:800; border:3px solid #fff8; border-radius:16px; color:#fff;
+            background:linear-gradient(to top, #2fb877 var(--p), #000b var(--p)); padding:6px; }
+    .tile b { display:block; font-size:.8em; color:#ffd56a; }
+    .tile.left { grid-column:1; } .tile.right { grid-column:3; }
+    .hand { position:absolute; width:34px; height:34px; margin:-17px 0 0 -17px; border:4px solid #ffd56a; border-radius:50%;
+            pointer-events:none; box-shadow:0 0 10px #000; }
+    .hand[hidden] { display:none; }
+    .resultCard { position:absolute; left:10px; right:10px; bottom:54px; padding:12px 14px; border-radius:14px; background:#000d;
+                  font-size:clamp(1rem, 3.5vmin, 1.6rem); line-height:1.35; }
+    .resultCard[hidden] { display:none; }
+    .resultCard button { float:right; margin-left:10px; padding:4px 10px; }
     .stage.full .count { font-size:7rem; } .stage.full .phase { top:140px; font-size:2rem; }
     .stage.full .feet span { font-size:3rem; }
     .feet span { font-size:1.3rem; font-weight:800; padding:6px 12px; border-radius:8px; background:#000a; color:#fff; transition:background .4s; }
     .feet span.hit { transition:none; }
     .feet span.l.hit { background:var(--left); } .feet span.r.hit { background:var(--right); }
+    .menu:not([hidden]) ~ .fullBtn { display:none; }   /* keep the corner free for the Close tile */
+    /* Laptop (wide and landscape): video on the left filling the height, controls on the right. Last, so it wins. */
+    @media (min-width: 900px) and (orientation: landscape) {
+      .layout { grid-template-columns:minmax(0, 1fr) 340px; }
+      .stage { height:calc(100vh - 64px); height:calc(100svh - 64px); }
+      .side { max-height:calc(100svh - 64px); overflow-y:auto; }
+    }
   </style>
 </head>
 <body>
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop -->
-  <h1>Salsa Sync <small id="version">v2.11</small></h1>
-  <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
-     then start a session. You get 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
-     A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.
-     Once the camera is on you don't need to touch the device: raise both hands above your head for 2 seconds to start or stop,
-     and use Full screen so the prompts are readable from across the room.</p>
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off -->
+  <header>
+    <h1>Salsa Sync <small id="version">v2.12</small></h1>
+    <details class="help"><summary>How it works</summary>
+      <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
+         Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
+         then hold a hand over a button until it fills up. Raising both hands during a session or step check stops it.</p>
+      <p>A session gives you 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
+         A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.
+         Step check starts with 3 seconds of standing still, then flashes L or R each time it sees a foot land.</p>
+    </details>
+  </header>
 
-  <div class="controls">
-    <button id="cameraBtn" class="primary">Start camera</button>
-    <select id="camera" aria-label="Camera" hidden>
-      <option value="environment">Back camera</option>
-      <option value="user">Front camera</option>
-    </select>
-  </div>
-  <div class="controls">
-    <label>Tempo
-      <select id="bpm"><option>140</option><option selected>160</option><option>180</option><option>200</option></select> BPM
-    </label>
-    <label>Length
-      <select id="dur"><option value="20">20 s</option><option value="30" selected>30 s</option><option value="60">60 s</option></select>
-    </label>
-    <button id="sessionBtn" disabled>Start session</button>
-  </div>
-  <div class="controls">
-    <button id="checkBtn" disabled>Step check</button>
-    <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04"> <span id="liftVal">4%</span> of leg</label>
-    <span id="calibNote" class="legend"></span>
-  </div>
-  <div class="controls">
-    <label>Raising both hands starts
-      <select id="handsMode"><option value="session">a session</option><option value="check">step check</option></select>
-    </label>
-    <label><input type="checkbox" id="voice" checked> Voice</label>
-  </div>
+  <div class="layout">
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="count" class="count"></div>
+      <div id="phase" class="phase"></div>
+      <div id="feet" class="feet" hidden><span class="l">L 0</span><span class="r">R 0</span></div>
+      <div id="prompt" class="prompt"></div>
+      <div id="resultCard" class="resultCard" hidden><button id="rcClose">✕</button><span id="rcText"></span></div>
+      <div id="menu" class="menu" hidden>
+        <div class="menuTitle">Hold a hand over a button</div>
+        <button class="tile left" data-act="session">▶ Session</button>
+        <button class="tile right" data-act="check">👣 Step check</button>
+        <button class="tile left" data-act="tempo">Tempo <b id="tTempo">160</b></button>
+        <button class="tile right" data-act="length">Length <b id="tLen">30 s</b></button>
+        <button class="tile left" data-act="voice">Voice <b id="tVoice">on</b></button>
+        <button class="tile right" data-act="close">✕ Close</button>
+      </div>
+      <div id="handL" class="hand" hidden></div><div id="handR" class="hand" hidden></div>
+      <button id="fullBtn" class="fullBtn">⛶ Full screen</button>
+    </div>
 
-  <div class="stage">
-    <video id="video" playsinline muted></video>
-    <canvas id="overlay"></canvas>
-    <div id="count" class="count"></div>
-    <div id="phase" class="phase"></div>
-    <div id="feet" class="feet" hidden><span class="l">L 0</span><span class="r">R 0</span></div>
-    <div id="prompt" class="prompt"></div>
-    <button id="fullBtn" class="fullBtn">⛶ Full screen</button>
+    <div class="side">
+      <div class="controls">
+        <button id="cameraBtn" class="primary">Start camera</button>
+        <select id="camera" aria-label="Camera" hidden>
+          <option value="environment">Back camera</option>
+          <option value="user">Front camera</option>
+        </select>
+        <button id="sessionBtn" disabled>Start session</button>
+        <button id="checkBtn" disabled>Step check</button>
+      </div>
+      <div class="controls settings">
+        <label>Tempo
+          <select id="bpm"><option>140</option><option selected>160</option><option>180</option><option>200</option></select> BPM
+        </label>
+        <label>Length
+          <select id="dur"><option value="20">20 s</option><option value="30" selected>30 s</option><option value="60">60 s</option></select>
+        </label>
+        <label><input type="checkbox" id="voice" checked> Voice</label>
+        <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04"> <span id="liftVal">4%</span> of leg</label>
+        <span id="calibNote" class="legend"></span>
+      </div>
+      <div id="status">Press Start camera to begin.</div>
+
+      <section id="results" hidden>
+        <h2>Last session</h2>
+        <p id="feedback" class="feedback"></p>
+        <p id="summary"></p>
+        <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
+        <div class="legend">Grey lines are beats; the thicker ones are the 1 and the 5. Each ▲ along the bottom is a detected step
+          (<b class="l">left</b> or <b class="r">right</b> foot). Steps on time sit on a beat line.</div>
+        <div class="controls" style="margin-top:10px"><button id="downloadBtn">Download session data (JSON)</button></div>
+      </section>
+
+      <details><summary>Live chart (for tuning)</summary>
+        <canvas id="live" class="chart"></canvas>
+        <div id="liveLegend" class="legend">Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.</div>
+      </details>
+    </div>
   </div>
-
-  <div id="status">Press Start camera to begin.</div>
-  <canvas id="live" class="chart"></canvas>
-  <div id="liveLegend" class="legend">Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.</div>
-
-  <section id="results" hidden>
-    <h2>Last session</h2>
-    <p id="feedback" class="feedback"></p>
-    <p id="summary"></p>
-    <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
-    <div class="legend">Grey lines are beats; the thicker ones are the 1 and the 5. Each ▲ along the bottom is a detected step
-      (<b class="l">left</b> or <b class="r">right</b> foot). Steps on time sit on a beat line.</div>
-    <div class="controls" style="margin-top:10px"><button id="downloadBtn">Download session data (JSON)</button></div>
-  </section>
 </main>
 
 <script type="module">
@@ -234,11 +281,11 @@
     }
 
     // Hands up for 2 s starts or stops things. Otherwise, when nothing is running, say what to do next.
-    const handsBusy = checkHands(lm, t);
+    const handsBusy = menuOpen ? (menuFrame(lm), true) : checkHands(lm, t);
     if (!handsBusy && !session && !checking) {
       if (!feetVisible) showPrompt("Step back", "red", { sub: "I can't see your feet", say: "Step back. I can't see your feet.", quiet: true });
-      else showPrompt("Raise both hands", "", { sub: `to start ${$("handsMode").selectedOptions[0].text}`,
-                                                 say: "Ready. Raise both hands to start.", quiet: true });
+      else if ($("resultCard").hidden) showPrompt("Raise both hands", "", { sub: "for the menu", say: "Ready. Raise both hands for the menu.", quiet: true });
+      else showPrompt(null);   // the result card is showing, keep the video clear
     }
 
     // Save this frame if a session is recording.
@@ -491,7 +538,7 @@
       audioBeats.push({ audio: t, count, countIn: inCount, practice, cue });
     }
 
-    sessionBtn.disabled = true; sessionBtn.textContent = "Recording…"; checkBtn.disabled = true;
+    sessionBtn.disabled = true; sessionBtn.textContent = "Recording…"; checkBtn.disabled = true; $("resultCard").hidden = true;
     // Map beat times onto the camera clock once audio is flowing.
     await new Promise(r => setTimeout(r, 1000));
     const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice, cue: b.cue }));
@@ -569,9 +616,9 @@
       `${s.bpm} BPM · ${nBeats} beats · ${s.steps.length} steps found · ${s.frames.length} frames ` +
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
     $("results").hidden = false;
+    $("rcText").textContent = $("feedback").textContent; $("resultCard").hidden = false;   // the result, on the video
     showPrompt("Done!", "green", { sub: tempoShort(s.tempo), say: tempoSentence(s.tempo), important: true, hideAfter: 6000 });
     drawSession(s);
-    $("results").scrollIntoView({ behavior: "smooth" });
   }
 
   $("downloadBtn").addEventListener("click", () => {
@@ -596,7 +643,7 @@
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     liveHistory.length = 0;
     cameraBtn.textContent = "Start camera"; sessionBtn.disabled = checkBtn.disabled = true;
-    showPrompt(null);
+    showPrompt(null); closeMenu();
     statusEl.textContent = "Camera stopped.";
   }
 
@@ -620,7 +667,7 @@
     if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
     audioCtx.resume();
     master = audioCtx.createGain(); master.connect(audioCtx.destination);
-    feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0;
+    feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0; $("resultCard").hidden = true;
     calib = { start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
     checking = true; feetWereLost = false;
     $("feet").hidden = false; updateFeet();
@@ -787,15 +834,81 @@
     if (!handsReady) return false;
     handsSince ??= t;
     const left = HANDS_MS - (t - handsSince);
-    const action = session ? "stop the session" : checking ? "stop step check" : `start ${$("handsMode").selectedOptions[0].text}`;
+    const action = session ? "stop the session" : checking ? "stop step check" : "open the menu";
     if (left > 0) { showPrompt("Keep them up…", "amber", { sub: `${Math.ceil(left / 1000)} · to ${action}` }); return true; }
     handsReady = false; handsSince = null;
     if (session) stopSession();
     else if (checking) stopCheck();
-    else if ($("handsMode").value === "check") startCheck();
-    else { showPrompt("Starting…", "amber", { hideAfter: 1500 }); sessionBtn.click(); }   // the session takes a second to set up
+    else openMenu();
     return true;
   }
+
+  // ---------- Air buttons: a menu you work by holding a hand over a button ----------
+  // Raising both hands (when nothing is running) opens it. Your wrists are drawn as yellow rings; hold one over a
+  // button for 1.5 s and it fills up green and fires. Move off and back on to press the same button again.
+  const DWELL_MS = 1500, MENU_TIMEOUT_MS = 20000;
+  const tiles = [...document.querySelectorAll(".tile")];
+  let menuOpen = false, hover = { tile: null, since: 0, fired: false }, menuActiveAt = 0;
+
+  function openMenu() {
+    menuOpen = true; $("menu").hidden = false; $("resultCard").hidden = true; menuActiveAt = performance.now();
+    showPrompt(null); updateTiles(); speak("Menu. Hold a hand over a button.");
+  }
+  function closeMenu() {
+    menuOpen = false; $("menu").hidden = true; $("handL").hidden = $("handR").hidden = true;
+    if (hover.tile) hover.tile.style.setProperty("--p", "0%");
+    hover = { tile: null, since: 0, fired: false };
+  }
+  function updateTiles() {
+    $("tTempo").textContent = $("bpm").value;
+    $("tLen").textContent = $("dur").selectedOptions[0].text;
+    $("tVoice").textContent = $("voice").checked ? "on" : "off";
+  }
+  function menuAction(act) {
+    menuActiveAt = performance.now();
+    const next = sel => { sel.selectedIndex = (sel.selectedIndex + 1) % sel.options.length; };   // tempo and length cycle round
+    if (act === "session") { closeMenu(); showPrompt("Starting…", "amber", { hideAfter: 1500 }); sessionBtn.click(); }
+    else if (act === "check") { closeMenu(); startCheck(); }
+    else if (act === "tempo") { next($("bpm")); speak(`Tempo ${$("bpm").value}`); }
+    else if (act === "length") { next($("dur")); speak(`${$("dur").value} seconds`); }
+    else if (act === "voice") { $("voice").checked = !$("voice").checked; speak("Voice on"); }
+    else closeMenu();
+    updateTiles();
+  }
+  tiles.forEach(tile => tile.addEventListener("click", () => menuAction(tile.dataset.act)));   // tapping works too
+
+  function menuFrame(lm) {
+    // Where the wrists appear on screen: the video is scaled to fit the stage ("contain") and may be mirrored.
+    const stage = $("video").parentElement, W = stage.clientWidth, H = stage.clientHeight;
+    const vw = video.videoWidth, vh = video.videoHeight, scale = Math.min(W / vw, H / vh);
+    const x0 = (W - vw * scale) / 2, y0 = (H - vh * scale) / 2, mirror = video.classList.contains("mirror");
+    const box = stage.getBoundingClientRect();
+    let over = null;
+    for (const [i, ring] of [[L_WRIST, $("handL")], [R_WRIST, $("handR")]]) {
+      if ((lm[i].visibility ?? 0) < 0.5) { ring.hidden = true; continue; }
+      const x = x0 + (mirror ? 1 - lm[i].x : lm[i].x) * vw * scale, y = y0 + lm[i].y * vh * scale;
+      ring.hidden = false; ring.style.left = x + "px"; ring.style.top = y + "px";
+      for (const tile of tiles) {
+        const r = tile.getBoundingClientRect(), left = r.left - box.left, top = r.top - box.top;
+        if (x >= left && x <= left + r.width && y >= top && y <= top + r.height) over = tile;
+      }
+    }
+    const now = performance.now();
+    if (over !== hover.tile) {
+      if (hover.tile) hover.tile.style.setProperty("--p", "0%");
+      hover = { tile: over, since: now, fired: false };
+    }
+    if (over) {
+      menuActiveAt = now;
+      if (!hover.fired) {
+        const progress = Math.min(1, (now - hover.since) / DWELL_MS);
+        over.style.setProperty("--p", `${progress * 100}%`);
+        if (progress >= 1) { hover.fired = true; over.style.setProperty("--p", "0%"); menuAction(over.dataset.act); }
+      }
+    }
+    if (now - menuActiveAt > MENU_TIMEOUT_MS) closeMenu();   // walked away: tidy up
+  }
+  $("rcClose").addEventListener("click", () => { $("resultCard").hidden = true; });
 
   // Full screen: the video fills the phone or laptop screen. Also hides the browser bars where that's allowed.
   $("fullBtn").addEventListener("click", () => {
