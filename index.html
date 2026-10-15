@@ -43,6 +43,8 @@
     .phase { position:absolute; top:72px; right:14px; font-size:1.3rem; font-weight:700; color:#fff; text-shadow:0 2px 8px #000; text-align:right; }
     .phase.cue { color:var(--ok); font-size:1.7rem; }
     #status { font-weight:600; font-size:.9rem; }
+    canvas.spread { width:100%; height:110px; background:var(--panel); border-radius:8px; display:block; margin-bottom:10px; }
+    canvas.spread[hidden] { display:none; }
     canvas.chart { height:150px; background:var(--panel); border-radius:8px; display:block; }
     #live { width:100%; }
     .scroll { overflow-x:auto; border-radius:8px; }
@@ -96,7 +98,7 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.17 clearer step result, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
     <h1>Salsa Sync <small id="version">v2.17</small></h1>
     <details class="help"><summary>How it works</summary>
@@ -152,6 +154,7 @@
       <section id="results" hidden>
         <h2>Last session</h2>
         <p id="feedback" class="feedback"></p>
+        <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas>
         <p id="summary"></p>
         <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
         <div class="legend">Grey lines are beats; the thicker ones are the 1 and the 5. Each ▲ along the bottom is a detected step
@@ -345,7 +348,7 @@
   const MIN_LIFT = 0.04;        // a lift must rise at least this many leg-lengths off the floor (default)
   let minLift = MIN_LIFT;       // set by calibration or the "Lift needed" slider
   const FLOOR_WINDOW = 1500;    // ms of history used to find where the foot rests on the floor
-  const ON_TIME_MS = 50;        // a landing within this many ms of the beat counts as on time
+  const ON_TIME_MS = 80;        // a landing within this many ms of the beat counts as on the beat
   const resetFoot = () => ({ leg: 0, recent: [], up: false, armed: true, peak: 0, count: 0 });
 
   // Rules 1 and 2: how high each foot is off its floor this frame. pt(i) gives body point i as {x, y}.
@@ -466,9 +469,8 @@
   }
 
   // How close your landings were to the beat. An average would let early and late steps cancel out (half 100 ms
-  // early and half 100 ms late averages to "right on the beat"), so instead: how many steps were on the beat or
-  // close, plus your habit (the middle offset), which says whether you tend to land early or late.
-  const CLOSE_MS = 100;         // within this many ms counts as close
+  // early and half 100 ms late averages to "right on the beat"), so instead each step goes in one of three groups:
+  // early, on the beat (within ON_TIME_MS), or late. Plus your habit (the middle offset): do you tend to land early or late?
   function timingReport(steps, nBeats) {
     if (steps.length < Math.max(4, nBeats * 0.3)) {
       return { steps: steps.length, text: "Steps: I couldn't see enough clear foot lifts to time them." };
@@ -477,16 +479,17 @@
     const misses = offsets.map(Math.abs).sort((a, b) => a - b);
     const middle = a => a[Math.floor(a.length / 2)];
     const habit = middle(offsets), typicalMiss = middle(misses);
-    const pct = ms => Math.round(100 * misses.filter(m => m <= ms).length / misses.length);
-    const onTime = pct(ON_TIME_MS), close = pct(CLOSE_MS) - onTime;
-    const result = { steps: steps.length, habitMs: habit, typicalMissMs: typicalMiss, onTimePct: onTime, closePct: close };
+    const pct = n => Math.round(100 * n / offsets.length);
+    const earlyPct = pct(offsets.filter(o => o < -ON_TIME_MS).length), latePct = pct(offsets.filter(o => o > ON_TIME_MS).length);
+    const onTimePct = 100 - earlyPct - latePct;
+    const result = { steps: steps.length, habitMs: habit, typicalMissMs: typicalMiss, earlyPct, onTimePct, latePct };
     // Misses this big mean the steps were spread right across the beat: either you drifted off tempo (the tempo
     // score will say so) or your steps were too small to time, e.g. salsa filmed from the front.
-    if (typicalMiss > 120) return { ...result, text: "Steps: I couldn't time your individual steps reliably this time, so go by the tempo score." };
+    if (typicalMiss > 120) return { ...result, unreliable: true, text: "Steps: I couldn't time your individual steps reliably this time, so go by the tempo score." };
     const tendency = habit < -30 ? `You tend to land a little early (about ${-habit} ms).`
                    : habit > 30  ? `You tend to land a little late (about ${habit} ms).`
                    : "No early or late habit.";
-    return { ...result, text: `Steps: ${onTime}% landed on the beat (within 0.05 s) and another ${close}% were close (within 0.1 s). ${tendency}` };
+    return { ...result, text: `Steps: ${onTimePct}% landed on the beat (within ${ON_TIME_MS / 1000} s), ${earlyPct}% early and ${latePct}% late. ${tendency}` };
   }
 
   // ---------- Charts ----------
@@ -540,6 +543,34 @@
       g.beginPath(); g.moveTo(x(step.t), h - 12); g.lineTo(x(step.t) - 5, h - 2); g.lineTo(x(step.t) + 5, h - 2); g.closePath();
       g.fillStyle = step.foot === "left" ? "#4ea1ff" : "#ff5a5f"; g.fill();
     }
+  }
+
+  // How your steps spread around the beat: a bar for every 20 ms, early on the left, late on the right.
+  // The middle band is "on the beat". Steps more than 0.3 s out are piled into the end bars.
+  const SPREAD_MS = 300, BIN_MS = 20;
+  function drawSpread(s) {
+    const c = $("spreadChart"), r = s.report;
+    c.hidden = r.onTimePct == null || !!r.unreliable;   // no chart when the steps couldn't be timed
+    if (c.hidden) return;
+    const w = c.clientWidth, h = c.clientHeight, top = 18, base = h - 16;
+    const g = sizeCanvas(c, w, h);
+    const nBins = 2 * SPREAD_MS / BIN_MS, counts = new Array(nBins).fill(0);
+    for (const st of s.steps) counts[Math.max(0, Math.min(nBins - 1, Math.floor((st.offset + SPREAD_MS) / BIN_MS)))]++;
+    const x = ms => ((ms + SPREAD_MS) / (2 * SPREAD_MS)) * w, most = Math.max(...counts);
+    g.fillStyle = "#3ecf8e22"; g.fillRect(x(-ON_TIME_MS), top, x(ON_TIME_MS) - x(-ON_TIME_MS), base - top);   // on-the-beat band
+    counts.forEach((n, i) => {
+      const mid = -SPREAD_MS + (i + 0.5) * BIN_MS, bh = (n / most) * (base - top);
+      g.fillStyle = Math.abs(mid) <= ON_TIME_MS ? "#3ecf8e" : "#e0a040";
+      g.fillRect(x(-SPREAD_MS + i * BIN_MS) + 1, base - bh, w / nBins - 2, bh);
+    });
+    g.strokeStyle = "#999"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x(0), top); g.lineTo(x(0), base); g.stroke(); g.setLineDash([]);
+    g.font = "12px system-ui"; g.textBaseline = "top";
+    g.fillStyle = "#e0a040"; g.textAlign = "left";  g.fillText(`Early ${r.earlyPct}%`, 4, 2);
+    g.textAlign = "right"; g.fillText(`Late ${r.latePct}%`, w - 4, 2);
+    g.fillStyle = "#3ecf8e"; g.textAlign = "center"; g.fillText(`On the beat ${r.onTimePct}%`, x(0), 2);
+    g.fillStyle = "#a0a0a0"; g.textBaseline = "bottom"; g.font = "11px system-ui";
+    g.textAlign = "left"; g.fillText("0.3 s early", 4, h); g.textAlign = "right"; g.fillText("0.3 s late", w - 4, h);
+    g.textAlign = "center"; g.fillText("beat", x(0), h);
   }
 
   // ---------- Rhythm (Web Audio) ----------
@@ -747,7 +778,7 @@
     $("results").hidden = false;
     $("rcText").textContent = $("feedback").textContent; $("resultCard").hidden = false;   // the result, on the video
     showPrompt("Done!", "green", { sub: tempoShort(s.tempo), say: tempoSentence(s.tempo), important: true, hideAfter: 6000 });
-    drawSession(s);
+    drawSession(s); drawSpread(s);
   }
 
   $("downloadBtn").addEventListener("click", () => {
