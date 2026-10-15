@@ -56,7 +56,7 @@
     .fullBtn { position:absolute; right:10px; bottom:10px; padding:6px 12px; background:#000a; border-color:#555; }
     .stage.full { position:fixed; inset:0; z-index:20; height:auto; border-radius:0; }
     /* Air-button menu: big tiles down the left and right edges, so you can reach them with your arms out. */
-    .menu { position:absolute; inset:0; display:grid; grid-template-columns:1fr 1.3fr 1fr; grid-template-rows:auto 1fr 1fr 1fr;
+    .menu { position:absolute; inset:0; display:grid; grid-template-columns:1fr 1.3fr 1fr; grid-template-rows:auto 1fr 1fr 1fr 1fr;
             gap:10px; padding:12px; background:#0006; }
     .menu[hidden] { display:none; }
     .menuTitle { grid-column:1 / 4; text-align:center; font-size:clamp(1rem, 4vmin, 2rem); font-weight:800; text-shadow:0 2px 8px #000; }
@@ -89,9 +89,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.12</small></h1>
+    <h1>Salsa Sync <small id="version">v2.13</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -115,8 +115,10 @@
         <div class="menuTitle">Hold a hand over a button</div>
         <button class="tile left" data-act="session">▶ Session</button>
         <button class="tile right" data-act="check">👣 Step check</button>
-        <button class="tile left" data-act="tempo">Tempo <b id="tTempo">160</b></button>
-        <button class="tile right" data-act="length">Length <b id="tLen">30 s</b></button>
+        <button class="tile left" data-act="tempo-">− Tempo <b class="tTempo">160</b></button>
+        <button class="tile right" data-act="tempo+">+ Tempo <b class="tTempo">160</b></button>
+        <button class="tile left" data-act="length-">− Length <b class="tLen">30 s</b></button>
+        <button class="tile right" data-act="length+">+ Length <b class="tLen">30 s</b></button>
         <button class="tile left" data-act="voice">Voice <b id="tVoice">on</b></button>
         <button class="tile right" data-act="close">✕ Close</button>
       </div>
@@ -653,6 +655,7 @@
   // Two extra rules: only one foot can be up at a time, and it has to be clearly higher than the other foot
   // (in salsa one foot always stays down, so both rising together is body movement, not a step).
   // It starts with 3 s of standing still to measure how much the points wobble, and sets minLift from that.
+  // That only begins once you've got into position and raised both hands, then put them down, to say you're ready.
   // Differences from the session version: the floor and leg length only use the past (we can't see the future live),
   // and a landing is only known once the foot is half way down, so the flash comes a moment after the step.
   let checking = false;
@@ -660,7 +663,7 @@
   const feet = {};
   const resetFoot = () => ({ leg: 0, recent: [], up: false, armed: true, peak: 0, count: 0 });
   const CALIB_MS = 3000;
-  let calib = null;    // { start, maxDiff, done }
+  let calib = null;    // { ready, handsWereUp, start, maxDiff, done }
   let feetWereLost = false;
 
   function startCheck() {
@@ -668,7 +671,7 @@
     audioCtx.resume();
     master = audioCtx.createGain(); master.connect(audioCtx.destination);
     feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0; $("resultCard").hidden = true;
-    calib = { start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
+    calib = { ready: false, handsWereUp: false, start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
     checking = true; feetWereLost = false;
     $("feet").hidden = false; updateFeet();
     checkBtn.textContent = "Stop step check"; sessionBtn.disabled = true;
@@ -716,6 +719,14 @@
     }
     checkHistory.push(row);
     while (t - checkHistory[0].t > LIVE_WINDOW_MS) checkHistory.shift();
+
+    // Before calibrating, wait until you say you're ready: hands up for 2 s, then hands down (see checkHands).
+    if (!calib.ready) {
+      if (calib.handsWereUp) showPrompt("Hands down", "amber", { sub: "then stand still", say: "Hands down, then stand still." });
+      else if (handsSince === null) showPrompt("Get in position", "amber", { sub: "then raise both hands", say: "Get in position, then raise both hands." });
+      drawCheck(t, "Waiting for you to raise both hands");
+      return;
+    }
 
     // Calibration: for the first 3 s, don't count anything, just record the biggest gap between the feet.
     if (!calib.done) {
@@ -830,14 +841,20 @@
   function checkHands(lm, t) {
     const seen = i => (lm[i].visibility ?? 0) > 0.5;
     const up = seen(NOSE) && [L_WRIST, R_WRIST].every(i => seen(i) && lm[i].y < lm[NOSE].y);
-    if (!up) { handsSince = null; handsReady = true; return false; }
+    if (!up) {
+      handsSince = null; handsReady = true;
+      if (checking && calib.handsWereUp) { calib.handsWereUp = false; calib.ready = true; }   // hands down: calibration starts
+      return false;
+    }
     if (!handsReady) return false;
     handsSince ??= t;
     const left = HANDS_MS - (t - handsSince);
-    const action = session ? "stop the session" : checking ? "stop step check" : "open the menu";
+    const waiting = checking && !calib.ready;
+    const action = session ? "stop the session" : waiting ? "start" : checking ? "stop step check" : "open the menu";
     if (left > 0) { showPrompt("Keep them up…", "amber", { sub: `${Math.ceil(left / 1000)} · to ${action}` }); return true; }
     handsReady = false; handsSince = null;
     if (session) stopSession();
+    else if (waiting) calib.handsWereUp = true;
     else if (checking) stopCheck();
     else openMenu();
     return true;
@@ -845,8 +862,9 @@
 
   // ---------- Air buttons: a menu you work by holding a hand over a button ----------
   // Raising both hands (when nothing is running) opens it. Your wrists are drawn as yellow rings; hold one over a
-  // button for 1.5 s and it fills up green and fires. Move off and back on to press the same button again.
-  const DWELL_MS = 1500, MENU_TIMEOUT_MS = 20000;
+  // button for 1.5 s and it fills up green and fires. Move off and back on to press the same button again,
+  // except plus and minus, which keep going up or down once a second while your hand stays there.
+  const DWELL_MS = 1500, REPEAT_MS = 1000, MENU_TIMEOUT_MS = 20000;
   const tiles = [...document.querySelectorAll(".tile")];
   let menuOpen = false, hover = { tile: null, since: 0, fired: false }, menuActiveAt = 0;
 
@@ -860,17 +878,18 @@
     hover = { tile: null, since: 0, fired: false };
   }
   function updateTiles() {
-    $("tTempo").textContent = $("bpm").value;
-    $("tLen").textContent = $("dur").selectedOptions[0].text;
+    document.querySelectorAll(".tTempo").forEach(b => b.textContent = $("bpm").value);
+    document.querySelectorAll(".tLen").forEach(b => b.textContent = $("dur").selectedOptions[0].text);
     $("tVoice").textContent = $("voice").checked ? "on" : "off";
   }
   function menuAction(act) {
     menuActiveAt = performance.now();
-    const next = sel => { sel.selectedIndex = (sel.selectedIndex + 1) % sel.options.length; };   // tempo and length cycle round
+    // Plus and minus move one option along, stopping at the ends.
+    const step = (sel, by) => { sel.selectedIndex = Math.min(sel.options.length - 1, Math.max(0, sel.selectedIndex + by)); };
     if (act === "session") { closeMenu(); showPrompt("Starting…", "amber", { hideAfter: 1500 }); sessionBtn.click(); }
     else if (act === "check") { closeMenu(); startCheck(); }
-    else if (act === "tempo") { next($("bpm")); speak(`Tempo ${$("bpm").value}`); }
-    else if (act === "length") { next($("dur")); speak(`${$("dur").value} seconds`); }
+    else if (act.startsWith("tempo")) { step($("bpm"), act.endsWith("+") ? 1 : -1); speak(`Tempo ${$("bpm").value}`); }
+    else if (act.startsWith("length")) { step($("dur"), act.endsWith("+") ? 1 : -1); speak(`${$("dur").value} seconds`); }
     else if (act === "voice") { $("voice").checked = !$("voice").checked; speak("Voice on"); }
     else closeMenu();
     updateTiles();
@@ -900,10 +919,11 @@
     }
     if (over) {
       menuActiveAt = now;
-      if (!hover.fired) {
-        const progress = Math.min(1, (now - hover.since) / DWELL_MS);
+      const repeats = /[+-]$/.test(over.dataset.act);
+      if (!hover.fired || repeats) {
+        const progress = Math.min(1, (now - hover.since) / (hover.fired ? REPEAT_MS : DWELL_MS));
         over.style.setProperty("--p", `${progress * 100}%`);
-        if (progress >= 1) { hover.fired = true; over.style.setProperty("--p", "0%"); menuAction(over.dataset.act); }
+        if (progress >= 1) { hover.fired = true; hover.since = now; over.style.setProperty("--p", "0%"); menuAction(over.dataset.act); }
       }
     }
     if (now - menuActiveAt > MENU_TIMEOUT_MS) closeMenu();   // walked away: tidy up
