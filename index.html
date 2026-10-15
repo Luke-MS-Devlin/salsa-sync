@@ -35,6 +35,19 @@
     .feedback { color:var(--fg); font-size:1.05rem; }
     .feet { position:absolute; top:10px; left:14px; display:flex; gap:8px; }
     .feet[hidden] { display:none; }
+    /* Big prompts, readable from across the room. Colour = state: amber get ready, green go, red can't see you. */
+    .prompt { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:max-content; max-width:92%;
+              text-align:center; font-size:clamp(2rem, 10vmin, 6.5rem); font-weight:800; line-height:1.1; color:#fff;
+              padding:.3em .6em; border-radius:18px; background:#000c; opacity:0; transition:opacity .4s; pointer-events:none; }
+    .prompt.show { opacity:1; }
+    .prompt.amber { background:#f0b429ee; color:#1a1300; }
+    .prompt.green { background:#2fb877ee; color:#03140b; }
+    .prompt.red { background:#e5484dee; }
+    .prompt small { display:block; font-size:.42em; font-weight:600; margin-top:.25em; }
+    .fullBtn { position:absolute; right:10px; bottom:10px; padding:6px 12px; background:#000a; border-color:#555; }
+    .stage.full { position:fixed; inset:0; z-index:20; aspect-ratio:auto; border-radius:0; }
+    .stage.full .count { font-size:7rem; } .stage.full .phase { top:140px; font-size:2rem; }
+    .stage.full .feet span { font-size:3rem; }
     .feet span { font-size:1.3rem; font-weight:800; padding:6px 12px; border-radius:8px; background:#000a; color:#fff; transition:background .4s; }
     .feet span.hit { transition:none; }
     .feet span.l.hit { background:var(--left); } .feet span.r.hit { background:var(--right); }
@@ -44,11 +57,13 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration -->
-  <h1>Salsa Sync <small id="version">v2.10</small></h1>
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop -->
+  <h1>Salsa Sync <small id="version">v2.11</small></h1>
   <p>Prop your phone 2.5–3 m away with your whole body in frame and the volume up. Start the camera, check your feet are visible,
      then start a session. You get 5 seconds to get into position, then a "3, 2, 1, Go!" countdown and two practice basics.
-     A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.</p>
+     A second, higher "3, 2, 1, Go!" means the real thing starts on the next 1, and that part is recorded.
+     Once the camera is on you don't need to touch the device: raise both hands above your head for 2 seconds to start or stop,
+     and use Full screen so the prompts are readable from across the room.</p>
 
   <div class="controls">
     <button id="cameraBtn" class="primary">Start camera</button>
@@ -71,6 +86,12 @@
     <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04"> <span id="liftVal">4%</span> of leg</label>
     <span id="calibNote" class="legend"></span>
   </div>
+  <div class="controls">
+    <label>Raising both hands starts
+      <select id="handsMode"><option value="session">a session</option><option value="check">step check</option></select>
+    </label>
+    <label><input type="checkbox" id="voice" checked> Voice</label>
+  </div>
 
   <div class="stage">
     <video id="video" playsinline muted></video>
@@ -78,6 +99,8 @@
     <div id="count" class="count"></div>
     <div id="phase" class="phase"></div>
     <div id="feet" class="feet" hidden><span class="l">L 0</span><span class="r">R 0</span></div>
+    <div id="prompt" class="prompt"></div>
+    <button id="fullBtn" class="fullBtn">⛶ Full screen</button>
   </div>
 
   <div id="status">Press Start camera to begin.</div>
@@ -189,7 +212,11 @@
   function onResult(result, t) {
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     const lm = result.landmarks[0];
-    if (!lm) { statusEl.textContent = `No one detected · ${fps.toFixed(0)} fps`; return; }
+    if (!lm) {
+      statusEl.textContent = `No one detected · ${fps.toFixed(0)} fps`;
+      if (!session) showPrompt("I can't see you", "red", { sub: "Step into view, whole body", say: "I can't see you. Step into view." });
+      return;
+    }
 
     draw.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS, { color: "#ffffff", lineWidth: 3 });
     for (const i of FOOT_POINTS) {
@@ -204,6 +231,14 @@
       statusEl.innerHTML = feetVisible
         ? `<span style="color:var(--ok)">Feet visible ✓</span> · ${fps.toFixed(0)} fps`
         : `Can't see both feet clearly – step back or tilt the phone down · ${fps.toFixed(0)} fps`;
+    }
+
+    // Hands up for 2 s starts or stops things. Otherwise, when nothing is running, say what to do next.
+    const handsBusy = checkHands(lm, t);
+    if (!handsBusy && !session && !checking) {
+      if (!feetVisible) showPrompt("Step back", "red", { sub: "I can't see your feet", say: "Step back. I can't see your feet.", quiet: true });
+      else showPrompt("Raise both hands", "", { sub: `to start ${$("handsMode").selectedOptions[0].text}`,
+                                                 say: "Ready. Raise both hands to start.", quiet: true });
     }
 
     // Save this frame if a session is recording.
@@ -302,6 +337,12 @@
     if (best.score < 0.25) return null;   // no clear repeating pattern
     const yourMs = best.lag * step;
     return { yourBasicMs: yourMs, musicBasicMs: Math.round(basicMs), percent: Math.round((basicMs / yourMs - 1) * 100) };
+  }
+
+  function tempoShort(tempo) {   // a few words for the big prompt
+    if (!tempo) return "Couldn't read your tempo";
+    if (Math.abs(tempo.percent) <= 3) return "Tempo spot on";
+    return tempo.percent > 0 ? `Rushing ${tempo.percent}%` : `Dragging ${-tempo.percent}%`;
   }
 
   function tempoSentence(tempo) {
@@ -466,6 +507,7 @@
       beatClock,
     };
     statusEl.textContent = `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${bpm} BPM)`;
+    speak("Get into position.");
     sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
@@ -483,6 +525,13 @@
     phaseEl.textContent = !current ? "Get ready" : current.countIn ? "Practice next" : realNext ? "Real thing next!"
                         : current.practice ? `Practice ${Math.floor((i - COUNT_IN) / 8) + 1} of ${PRACTICE_BASICS}` : "Recording";
     phaseEl.classList.toggle("cue", !!realNext);
+
+    // The same phases as big prompts (no voice while the music plays, so it doesn't talk over the beat).
+    if (!current) showPrompt("Get ready", "amber", { sub: "Music starts in a moment" });
+    else if (current.countIn) showPrompt("Practice next", "amber");
+    else if (realNext) showPrompt("Real thing next!", "amber");
+    else if (current.practice) showPrompt("Practice", "green", { sub: `basic ${Math.floor((i - COUNT_IN) / 8) + 1} of ${PRACTICE_BASICS}`, hideAfter: 1500 });
+    else showPrompt("Recording", "green", { hideAfter: 1500 });
   }
 
   // Stopping early ends the session now and keeps what was recorded so far.
@@ -490,7 +539,7 @@
   function stopSession() {
     clearTimeout(endTimer);
     if (performance.now() < session.startPerf) {   // stopped before the real part began: nothing to keep
-      session = null; master.disconnect(); wakeLock?.release?.(); wakeLock = null;
+      session = null; master.disconnect(); wakeLock?.release?.(); wakeLock = null; showPrompt("Cancelled", "", { hideAfter: 2000 });
       sessionBtn.textContent = "Start session"; checkBtn.disabled = false; statusEl.textContent = "Session cancelled.";
       return;
     }
@@ -520,6 +569,7 @@
       `${s.bpm} BPM · ${nBeats} beats · ${s.steps.length} steps found · ${s.frames.length} frames ` +
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
     $("results").hidden = false;
+    showPrompt("Done!", "green", { sub: tempoShort(s.tempo), say: tempoSentence(s.tempo), hideAfter: 6000 });
     drawSession(s);
     $("results").scrollIntoView({ behavior: "smooth" });
   }
@@ -546,6 +596,7 @@
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     liveHistory.length = 0;
     cameraBtn.textContent = "Start camera"; sessionBtn.disabled = checkBtn.disabled = true;
+    showPrompt(null);
     statusEl.textContent = "Camera stopped.";
   }
 
@@ -563,6 +614,7 @@
   const resetFoot = () => ({ leg: 0, recent: [], up: false, armed: true, peak: 0, count: 0 });
   const CALIB_MS = 3000;
   let calib = null;    // { start, maxDiff, done }
+  let feetWereLost = false;
 
   function startCheck() {
     if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
@@ -570,7 +622,7 @@
     master = audioCtx.createGain(); master.connect(audioCtx.destination);
     feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0;
     calib = { start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
-    checking = true;
+    checking = true; feetWereLost = false;
     $("feet").hidden = false; updateFeet();
     checkBtn.textContent = "Stop step check"; sessionBtn.disabled = true;
     $("liveLegend").innerHTML = `Live lift off the floor (last 5 s): <b class="l">left</b> and <b class="r">right</b>.
@@ -579,6 +631,8 @@
 
   function stopCheck() {
     checking = false; master.disconnect();
+    const n = feet.left.count + feet.right.count;
+    showPrompt("Stopped", "", { sub: `L ${feet.left.count} · R ${feet.right.count}`, say: `Stopped. ${n} steps.`, hideAfter: 4000 });
     $("feet").hidden = true;
     checkBtn.textContent = "Step check"; sessionBtn.disabled = !running;
     $("liveLegend").innerHTML = `Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.`;
@@ -592,8 +646,12 @@
       checkHistory.length = 0;
       if (!calib.done) { calib.start = null; calib.maxDiff = 0; }   // calibration restarts once the feet are back
       drawCheck(t, "Can't see both feet, so nothing is counted");
+      showPrompt("Step back", "red", { sub: "I can't see your feet", say: "Step back. I can't see your feet." });
+      feetWereLost = true;
       return;
     }
+    if (feetWereLost && calib.done) showPrompt(null);   // feet are back: clear the red warning
+    feetWereLost = false;
     const row = { t };
     for (const [foot, hip, knee, ankle] of [["left", 23, 25, 27], ["right", 24, 26, 28]]) {
       const f = feet[foot];
@@ -618,11 +676,12 @@
       calib.maxDiff = Math.max(calib.maxDiff, Math.abs(row.left - row.right));
       if (t - calib.start < CALIB_MS) {
         const secs = Math.ceil((CALIB_MS - (t - calib.start)) / 1000);
-        const [l, r] = $("feet").children; l.textContent = "Stand still"; r.textContent = secs;   // big, on the video
+        showPrompt("Stand still", "amber", { sub: `${secs}`, say: "Stand still with both feet down." });
         drawCheck(t, `Stand still with both feet down… ${secs}`);
         return;
       }
-      finishCalibration(); updateFeet();
+      finishCalibration();
+      showPrompt("Go! Start stepping", "green", { say: "Done. Start stepping.", hideAfter: 2500 });
     }
 
     for (const [foot, other] of [["left", "right"], ["right", "left"]]) {
@@ -678,11 +737,79 @@
   $("lift").addEventListener("input", e => { minLift = Number(e.target.value); showLift(); });
   checkBtn.addEventListener("click", () => checking ? stopCheck() : startCheck());
 
+  // ---------- Big prompts and voice (so you can follow along from 3-4 m away) ----------
+  // showPrompt is called every frame, so it only does something when the message changes.
+  // quiet: a hint that waits until any timed message (like "Stopped") has finished.
+  let promptKey = "", promptTimer = null, promptBusyUntil = 0;
+  function showPrompt(text, tone = "", { sub = "", say = null, hideAfter = 0, quiet = false } = {}) {
+    const key = text === null ? "none" : `${tone}|${text}|${sub}`;
+    if (key === promptKey || (quiet && performance.now() < promptBusyUntil)) return;
+    promptKey = key; clearTimeout(promptTimer); promptBusyUntil = 0;
+    const el = $("prompt");
+    if (text === null) { el.classList.remove("show"); return; }
+    el.className = `prompt show ${tone}`;
+    el.textContent = text;
+    if (sub) { const small = document.createElement("small"); small.textContent = sub; el.append(small); }
+    if (say) speak(say);
+    if (hideAfter) {
+      promptBusyUntil = performance.now() + hideAfter;
+      promptTimer = setTimeout(() => el.classList.remove("show"), hideAfter);   // key stays, so it doesn't pop back up
+    }
+  }
+
+  // The browser's built-in text-to-speech: works on phones and laptops, no install or AI service.
+  let lastSaid = "", lastSaidAt = 0;
+  function speak(text) {
+    if (!$("voice").checked || !window.speechSynthesis) return;
+    if (text === lastSaid && performance.now() - lastSaidAt < 5000) return;   // don't nag
+    lastSaid = text; lastSaidAt = performance.now();
+    speechSynthesis.cancel();
+    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  }
+
+  // ---------- Hands up to start / stop ----------
+  // Both wrists above your nose for 2 s starts what "Raising both hands starts" says, or stops whatever is running.
+  // After it fires you have to lower your hands before it can fire again.
+  const HANDS_MS = 2000, NOSE = 0, L_WRIST = 15, R_WRIST = 16;
+  let handsSince = null, handsReady = true;
+  function checkHands(lm, t) {
+    const seen = i => (lm[i].visibility ?? 0) > 0.5;
+    const up = seen(NOSE) && [L_WRIST, R_WRIST].every(i => seen(i) && lm[i].y < lm[NOSE].y);
+    if (!up) { handsSince = null; handsReady = true; return false; }
+    if (!handsReady) return false;
+    handsSince ??= t;
+    const left = HANDS_MS - (t - handsSince);
+    const action = session ? "stop the session" : checking ? "stop step check" : `start ${$("handsMode").selectedOptions[0].text}`;
+    if (left > 0) { showPrompt("Keep them up…", "amber", { sub: `${Math.ceil(left / 1000)} · to ${action}` }); return true; }
+    handsReady = false; handsSince = null;
+    if (session) stopSession();
+    else if (checking) stopCheck();
+    else if ($("handsMode").value === "check") startCheck();
+    else { showPrompt("Starting…", "amber", { hideAfter: 1500 }); sessionBtn.click(); }   // the session takes a second to set up
+    return true;
+  }
+
+  // Full screen: the video fills the phone or laptop screen. Also hides the browser bars where that's allowed.
+  $("fullBtn").addEventListener("click", () => {
+    const full = !$("video").parentElement.classList.contains("full");
+    $("video").parentElement.classList.toggle("full", full);
+    $("fullBtn").textContent = full ? "✕ Exit full screen" : "⛶ Full screen";
+    if (full) document.documentElement.requestFullscreen?.().catch(() => {});
+    else if (document.fullscreenElement) document.exitFullscreen();
+  });
+  document.addEventListener("fullscreenchange", () => {   // pressing Esc leaves full screen too
+    if (!document.fullscreenElement && $("video").parentElement.classList.contains("full")) $("fullBtn").click();
+  });
+
   // ---------- Buttons ----------
   cameraBtn.addEventListener("click", async () => {
     if (running) { stopCamera(); return; }
     try {
       cameraBtn.disabled = true;
+      // Phones only allow sound and speech after a tap, so switch them on now for later hands-free starts.
+      if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
+      audioCtx.resume();
+      speak("Starting the camera.");
       if (!landmarker) await loadModel();
       await startCamera();
       running = true; cameraBtn.textContent = "Stop camera"; sessionBtn.disabled = checkBtn.disabled = false;
