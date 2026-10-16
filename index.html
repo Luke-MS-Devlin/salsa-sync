@@ -105,6 +105,13 @@
     .feet span.l.hit { background:var(--left); } .feet span.r.hit { background:var(--right); }
     .menu:not([hidden]) ~ .fullBtn { display:none; }   /* keep the corner free for the Close tile */
     /* Results summary: a tip, a score out of 100, four tiles and your typical basic. Lights: green good, amber close, red off. */
+    /* On a phone the results open as their own full screen, to read up close (Results button); Close goes back to the camera.
+       On a laptop they stay in the side column (see the media query at the end). */
+    #results:not(.open) { display:none; }
+    #results.open { position:fixed; inset:0; z-index:30; overflow-y:auto; background:var(--bg); padding:12px 16px 32px; }
+    #results .sum, #results > details, #results > .controls { max-width:480px; margin-inline:auto; }
+    .resHead { display:flex; align-items:center; justify-content:space-between; gap:10px; max-width:480px; margin:0 auto 12px; }
+    .resHead h2 { margin:0; }
     #results { --good:#2fb877; --warn:#f0b429; --bad:#e5484d; --line:#2c2f35; --soft:#c9cdd3; --ghost:#5b616b; }
     .sum { display:flex; flex-direction:column; gap:16px; }
     .eyebrow { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; }
@@ -151,6 +158,8 @@
       .layout { grid-template-columns:minmax(0, 1fr) 340px; }
       .stage { height:calc(100vh - 64px); height:calc(100svh - 64px); }
       .side { max-height:calc(100svh - 64px); overflow-y:auto; }
+      #results:not([hidden]) { display:block; position:static; padding:0; background:none; }
+      #closeResults, #resultsBtn { display:none; }
     }
   </style>
 </head>
@@ -158,9 +167,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.29</small></h1>
+    <h1>Salsa Sync <small id="version">v2.30</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -231,12 +240,13 @@
         </select>
         <button id="sessionBtn" disabled>Start session</button>
         <button id="checkBtn" disabled>Step check</button>
+        <button id="resultsBtn" hidden>📊 Results</button>
         <button id="settingsBtn">⚙ Settings</button>
       </div>
       <div id="status">Press Start camera to begin.</div>
 
       <section id="results" hidden>
-        <h2>Last session</h2>
+        <div class="resHead"><h2>Last session</h2><button id="closeResults">✕ Close</button></div>
         <!-- Summary: tap the score or a tile to see it on your typical basic; tap it again to go back. -->
         <div class="sum">
           <div class="card tipCard" aria-live="polite"><span class="eyebrow">Next time</span><h3 id="tipH"></h3><p id="tipP"></p></div>
@@ -789,6 +799,17 @@
     el.addEventListener("click", tap);
     el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tap(); } });
   });
+  // Results screen (phone): opened with the Results button, closed with Close or Escape, and whenever the camera
+  // needs to be seen again (the hands-up menu, a new session or step check).
+  const openResults = () => {
+    $("results").classList.add("open"); $("results").scrollTop = 0;
+    if ($("fullAnalysis").open) { drawSession(lastSession); drawSpread(lastSession); }   // charts need to be on screen to size
+  };
+  const closeResults = () => $("results").classList.remove("open");
+  $("resultsBtn").addEventListener("click", openResults);
+  $("closeResults").addEventListener("click", closeResults);
+  addEventListener("keydown", e => { if (e.key === "Escape") closeResults(); });
+
   // The charts in the full analysis can only be drawn once they're on screen (they take their width from the page).
   $("fullAnalysis").addEventListener("toggle", () => { if ($("fullAnalysis").open && lastSession?.steps) { drawSession(lastSession); drawSpread(lastSession); } });
 
@@ -1122,6 +1143,7 @@
   // app said "Raise both hands for the menu" just before the music started.
   let starting = false;
   async function startSession(mode = "salsa", getReadySec = GET_READY_SEC) {
+    closeResults();
     const sync = mode === "sync";
     starting = true; showPrompt("Get ready", "amber", { sub: sync ? "Clicks start in a moment" : "Music starts in a moment" });
     if (!audioCtx) { audioCtx = new AudioContext({ latencyHint: "interactive" }); }
@@ -1273,8 +1295,10 @@
     $("summary").textContent =
       `${Math.round(s.bpm)} BPM${s.song ? ` (${s.song})` : ""} · ${nBeats} beats · ${s.steps.length} steps found · ${s.frames.length} frames ` +
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
-    $("results").hidden = false;
-    showPrompt("Done!", "green", { sub: "Your results are on the screen", say: "Done. Your results are on the screen.", important: true, hideAfter: 4000 });
+    $("results").hidden = $("resultsBtn").hidden = false;
+    // Big enough to read from where you danced: the score and the tip. The rest is on the Results screen, up close.
+    showPrompt(summary.score == null ? "Done!" : `${summary.score}/100`, "green",
+      { sub: summary.tip[0], say: "Done. Your results are on the screen.", important: true, hideAfter: 8000 });
     if ($("fullAnalysis").open) { drawSession(s); drawSpread(s); }
   }
 
@@ -1325,6 +1349,7 @@
   const STILL_MAX = 0.06;     // feet further apart in height than this (share of leg length) means you're moving
 
   function startCheck(forSession = false) {
+    closeResults();
     if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
     audioCtx.resume();
     master = newMaster();
@@ -1539,6 +1564,7 @@
   }
 
   function openMenu() {
+    closeResults();
     menuOpen = true; $("menu").hidden = false; menuActiveAt = performance.now();
     showMenuPage("main"); showPrompt(null); updateTiles(); speak("Menu. Hold a hand over a button.");
   }
