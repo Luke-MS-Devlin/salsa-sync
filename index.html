@@ -117,6 +117,11 @@
       <p>Bluetooth headphones and speakers play the music late, which makes every step look late. Run Audio sync in Settings
          (or from the menu) once for each pair of headphones or speakers: march on the spot to 16 clicks and it measures the delay.
          Filming from slightly to one side helps when your feet cross in front of each other.</p>
+      <p>Music (in Settings): the built-in salsa band works at any tempo. The real songs are free-to-share recordings from the
+         <a href="https://freemusicarchive.org/">Free Music Archive</a>: "Cupido" and "Vamos A Tocar Sonero" by Frank Guerrero y Su Grupo Aché
+         (<a href="https://creativecommons.org/licenses/by-nc-nd/3.0/">CC BY-NC-ND 3.0</a>, played unchanged at their own tempo) and
+         "La Mujer de Antonio" by SONGO 21 (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/">CC BY-NC-SA 3.0</a>, sped up or slowed down for each tempo).
+         Details in <a href="music/README.md">music/README.md</a>.</p>
     </details>
   </header>
 
@@ -186,7 +191,7 @@
   <div class="row">
     <label>Tempo <select id="bpm"><option>140</option><option selected>160</option><option>180</option><option>200</option></select> BPM</label>
     <label>Length <select id="dur"><option value="20">20 s</option><option value="30" selected>30 s</option><option value="60">60 s</option></select></label>
-    <label>Music <select id="music"><option value="band" selected>Salsa band</option><option value="rhythm">Rhythm only</option></select></label>
+    <label>Music <select id="music"><option value="band" selected>Salsa band</option><option value="rhythm">Rhythm only</option><option value="cupido">Song: Cupido (170 BPM)</option><option value="vamos">Song: Vamos A Tocar Sonero (190 BPM)</option><option value="mujer">Song: La Mujer de Antonio</option></select></label>
     <label><input type="checkbox" id="voice" checked> Voice</label>
   </div>
   <h3>Audio sync <small>for your headphones or speakers</small></h3>
@@ -509,7 +514,7 @@
     const result = { steps: steps.length, habitMs: habit, typicalMissMs: typicalMiss, earlyPct, onTimePct, latePct };
     // Misses this big mean the steps were spread right across the beat: either you drifted off tempo (the tempo
     // score will say so) or your steps were too small to time, e.g. salsa filmed from the front.
-    if (typicalMiss > 120) return { ...result, unreliable: true, text: "Timing: your steps were too spread out around the beats for me to score. Try a slower tempo and step with the cowbell." };
+    if (typicalMiss > 120) return { ...result, unreliable: true, text: "Timing: your steps were too spread out around the beats for me to score. Try a slower tempo and step with the beat." };
     const tendency = habit < -30 ? " Overall you tend to step a little early."
                    : habit > 30  ? " Overall you tend to step a little late."
                    : "";
@@ -676,6 +681,32 @@
     for (const p of BASS)  if (Math.floor(p) === pos) bass(t + (p - pos) * beatSec, chordAt(Math.ceil(p + 0.5) % 8).bass);
   }
 
+  // ---------- Real songs ----------
+  // music/songs.json lists each song with the time of every beat in its file (tracked once, then checked by ear). A
+  // live band drifts slightly, so we use those real beat times rather than a fixed tempo. Each beat list starts on a
+  // "5", so the count-in's 5, 6, 7, 8 lines up with the song.
+  //   fixedTempo songs (licence: no changes allowed) play as they are, at their own tempo.
+  //   The others have one copy per tempo, sped up or slowed down with the pitch kept the same.
+  let songList = null;
+  const songCache = {};
+  const isSong = id => !["band", "rhythm"].includes(id);
+  async function loadSong(id, bpm) {
+    songList ??= await (await fetch("music/songs.json")).json();
+    const song = songList[id], f = song.fixedTempo ? song.files.any : song.files[bpm];
+    songCache[f.file] ??= await audioCtx.decodeAudioData(await (await fetch(f.file)).arrayBuffer());
+    return { ...f, buffer: songCache[f.file], title: song.title };
+  }
+  // A fixed-tempo song decides the tempo; otherwise it's the Tempo setting.
+  const SONG_BPM = { cupido: 170, vamos: 190 };
+  const chosenBpm = () => SONG_BPM[$("music").value] ?? Number($("bpm").value);
+  function setMusic(id) {
+    if (![...$("music").options].some(o => o.value === id)) id = "band";
+    $("music").value = id; $("bpm").disabled = !!SONG_BPM[id];   // a fixed-tempo song sets its own tempo
+    try { localStorage.setItem("music", id); } catch {}
+    updateTiles();
+  }
+  $("music").addEventListener("change", e => setMusic(e.target.value));
+
   // Convert a time on the audio clock to the same clock the camera frames use.
   function audioToPerf(audioTime) {
     const ts = audioCtx.getOutputTimestamp ? audioCtx.getOutputTimestamp() : null;
@@ -709,6 +740,7 @@
     try { localStorage.setItem("audioDelayMs", audioDelay); } catch {}
   }
   setDelay(audioDelay);
+  try { setMusic(localStorage.getItem("music") || "band"); } catch { setMusic("band"); }
   $("delay").addEventListener("input", e => setDelay(Number(e.target.value)));
 
   // Audio sync: body check first (so steps are counted properly), then the 16 clicks.
@@ -747,22 +779,36 @@
     master = newMaster();
     try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
 
-    const bpm = sync ? SYNC_BPM : Number($("bpm").value), seconds = Number($("dur").value);
-    const music = $("music").value;
+    const music = sync ? "rhythm" : $("music").value;
+    let song = null;
+    if (isSong(music)) {
+      statusEl.textContent = "Loading the song…"; showPrompt("Loading the song…", "amber");
+      try { song = await loadSong(music, chosenBpm()); }
+      catch { statusEl.textContent = "Couldn't load the song. Check your internet connection, or pick Salsa band in Settings."; showPrompt(null); return; }
+    }
+    const bpm = sync ? SYNC_BPM : song ? song.bpm : Number($("bpm").value), seconds = Number($("dur").value);
     const beatSec = 60 / bpm;
     const practiceBeats = sync ? 0 : PRACTICE_BEATS;
-    const nBeats = COUNT_IN + practiceBeats + (sync ? SYNC_BEATS : Math.round(seconds / beatSec));
+    let nBeats = COUNT_IN + practiceBeats + (sync ? SYNC_BEATS : Math.round(seconds / beatSec));
     const start = audioCtx.currentTime + getReadySec;
+    // Beat k's time: the song's own beat times if there's a song, otherwise an exact grid.
+    if (song) nBeats = Math.min(nBeats, song.beats.length - 1);
+    const beatAt = k => song ? start + song.beats[k] - song.beats[0] : start + k * beatSec;
+    if (song) {   // play the file so its first listed beat lands exactly at "start"
+      const src = audioCtx.createBufferSource(), vol = audioCtx.createGain(); src.buffer = song.buffer;
+      vol.gain.value = 0.5; src.connect(vol).connect(master);   // finished records are already loud: turn down so the limiter stays out of it
+      src.start(start, song.beats[0]); src.stop(beatAt(nBeats - 1) + beatSec);
+    }
 
     const audioBeats = [];
     for (let k = 0; k < nBeats; k++) {
-      const t = start + k * beatSec;
+      const t = beatAt(k);
       const inCount = k < COUNT_IN;
       const practice = !inCount && k < COUNT_IN + practiceBeats;
       const pos = (k - COUNT_IN + 8 * 100) % 8;           // 0..7 within the 8-count
       const count = inCount ? 5 + k : pos + 1;            // count-in shows 5,6,7,8
-      cowbell(t, count === 1 || count === 5);
-      if (!inCount && !sync) {
+      if (!song) cowbell(t, count === 1 || count === 5);
+      if (!inCount && !sync && !song) {
         for (const c of CLAVE_23) if (Math.floor(c) === pos) clave(t + (c - pos) * beatSec);
         if (CONGA.includes(pos)) conga(t);
         if (music === "band") band(t, pos, beatSec);
@@ -781,7 +827,7 @@
     const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice, cue: b.cue, startHere: b.startHere }));
     const firstReal = beats[COUNT_IN + practiceBeats];
     session = {
-      bpm, beats, frames: [], sync, music,
+      bpm, beats, frames: [], sync, music, song: song?.title ?? null,
       audioDelayMs: sync ? 0 : audioDelay,
       startPerf: firstReal.t - 200,                        // only the real part is recorded
       endPerf: beats[beats.length - 1].t + beatSec * 1000,
@@ -792,7 +838,7 @@
       beatClock,
     };
     statusEl.textContent = sync ? `Audio sync: after the countdown, march on the spot, one step on every click (${SYNC_BEATS} clicks)`
-      : `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${bpm} BPM)`;
+      : `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${Math.round(bpm)} BPM)`;
     speak(sync ? "March on the spot, one step on every click." : "Get ready.");
     sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
@@ -863,7 +909,7 @@
     const secs = (s.endPerf - s.startPerf) / 1000;
     const visible = s.frames.filter(f => FOOT_POINTS.every(i => f.pts[i][2] > 0.5)).length;
     $("summary").textContent =
-      `${s.bpm} BPM · ${nBeats} beats · ${s.steps.length} steps found · ${s.frames.length} frames ` +
+      `${Math.round(s.bpm)} BPM${s.song ? ` (${s.song})` : ""} · ${nBeats} beats · ${s.steps.length} steps found · ${s.frames.length} frames ` +
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
     $("results").hidden = false;
     $("rcText").textContent = $("feedback").textContent; $("resultCard").hidden = false;   // the result, on the video
@@ -1121,7 +1167,7 @@
     hover = { tile: null, since: 0, fired: false };
   }
   function updateTiles() {
-    document.querySelectorAll(".tTempo").forEach(b => b.textContent = $("bpm").value);
+    document.querySelectorAll(".tTempo").forEach(b => b.textContent = chosenBpm());
     document.querySelectorAll(".tLen").forEach(b => b.textContent = $("dur").selectedOptions[0].text);
     $("tSync").textContent = `${audioDelay} ms`;
   }
@@ -1131,7 +1177,10 @@
     const step = (sel, by) => { sel.selectedIndex = Math.min(sel.options.length - 1, Math.max(0, sel.selectedIndex + by)); };
     if (act === "session") { closeMenu(); showPrompt("Starting…", "amber", { hideAfter: 1500 }); sessionBtn.click(); }
     else if (act === "check") { closeMenu(); startCheck(); }
-    else if (act.startsWith("tempo")) { step($("bpm"), act.endsWith("+") ? 1 : -1); speak(`Tempo ${$("bpm").value}`); }
+    else if (act.startsWith("tempo")) {
+      if (SONG_BPM[$("music").value]) speak(`This song is always ${chosenBpm()}`);   // fixed-tempo song: can't change
+      else { step($("bpm"), act.endsWith("+") ? 1 : -1); speak(`Tempo ${$("bpm").value}`); }
+    }
     else if (act.startsWith("length")) { step($("dur"), act.endsWith("+") ? 1 : -1); speak(`${$("dur").value} seconds`); }
     else if (act === "sync") { closeMenu(); startSync(); }
     else if (act === "settings") { showMenuPage("settings"); speak("Settings."); }
