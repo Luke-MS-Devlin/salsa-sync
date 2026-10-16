@@ -119,9 +119,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.25</small></h1>
+    <h1>Salsa Sync <small id="version">v2.26</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -387,7 +387,7 @@
 
     // Hands up for 2 s starts or stops things. Otherwise, when nothing is running, say what to do next.
     const handsBusy = menuOpen ? (menuFrame(lm), true) : checkHands(lm, t);
-    if (!handsBusy && !session && !checking) {
+    if (!handsBusy && !session && !checking && !starting) {
       if (!feetVisible) showPrompt("Step back", "red", { sub: "I can't see your feet", say: "Step back. I can't see your feet.", quiet: true });
       else if ($("resultCard").hidden) showPrompt("Raise both hands", "", { sub: "for the menu", say: "Ready. Raise both hands for the menu.", quiet: true });
       else showPrompt(null);   // the result card is showing, keep the video clear
@@ -916,8 +916,13 @@
   let wakeLock = null, endTimer = null, pumpTimer = null;
 
   // mode "salsa" is the normal session; "sync" is the audio sync march (16 plain clicks).
+  // starting covers the moment between the body check finishing and the session existing (setting up the sound,
+  // loading a song, then a 1 s wait for the audio clock). Without it, that gap looked like "nothing running" and the
+  // app said "Raise both hands for the menu" just before the music started.
+  let starting = false;
   async function startSession(mode = "salsa", getReadySec = GET_READY_SEC) {
     const sync = mode === "sync";
+    starting = true; showPrompt("Get ready", "amber", { sub: sync ? "Clicks start in a moment" : "Music starts in a moment" });
     if (!audioCtx) { audioCtx = new AudioContext({ latencyHint: "interactive" }); }
     await audioCtx.resume();
     master = newMaster();
@@ -928,7 +933,7 @@
     if (isSong(music)) {
       statusEl.textContent = "Loading the song…"; showPrompt("Loading the song…", "amber");
       try { song = await loadSong(music, chosenBpm()); }
-      catch { statusEl.textContent = "Couldn't load the song. Check your internet connection, or pick Salsa band in Settings."; showPrompt(null); return; }
+      catch { starting = false; statusEl.textContent = "Couldn't load the song. Check your internet connection, or pick Salsa band instead."; showPrompt(null); return; }
     }
     const bpm = sync ? SYNC_BPM : song ? song.bpm : choice.bpm, seconds = choice.dur;
     const beatSec = 60 / bpm;
@@ -977,6 +982,7 @@
     await new Promise(r => setTimeout(r, 1000));
     const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice, cue: b.cue, startHere: b.startHere }));
     const firstReal = beats[COUNT_IN + practiceBeats];
+    starting = false;
     session = {
       bpm, beats, frames: [], sync, music, song: song?.title ?? null,
       audioDelayMs: sync ? 0 : audioDelay,
@@ -1067,7 +1073,6 @@
       `${Math.round(s.bpm)} BPM${s.song ? ` (${s.song})` : ""} · ${nBeats} beats · ${s.steps.length} steps found · ${s.frames.length} frames ` +
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
     $("results").hidden = false;
-    $("rcText").textContent = $("feedback").textContent; $("resultCard").hidden = false;   // the result, on the video
     showPrompt("Done!", "green", { sub: "Your results are on the screen", say: "Done. Your results are on the screen.", important: true, hideAfter: 4000 });
     drawSession(s); drawSpread(s);
   }
@@ -1443,7 +1448,7 @@
   // Pressing it again cancels.
   function runSession(mode, getReadySec) {
     startSession(mode, getReadySec).catch(err => {
-      statusEl.textContent = "Session error: " + err.message; session = null;
+      statusEl.textContent = "Session error: " + err.message; session = null; starting = false;
       sessionBtn.disabled = false; sessionBtn.textContent = "Start session";
     });
   }
