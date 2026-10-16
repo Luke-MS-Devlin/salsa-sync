@@ -25,6 +25,20 @@
     .settingsDlg p { margin:2px 0 6px; }
     .settingsDlg .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .settingsDlg form { margin-top:12px; text-align:right; }
+    .settingsDlg form button { margin-left:8px; }
+    /* Session setup: big tap targets. A row of choices where one is picked (styled radio buttons). */
+    .seg { display:flex; gap:6px; flex-wrap:wrap; }
+    .seg[hidden] { display:none; }
+    .seg label { flex:1; min-width:60px; }
+    .seg input { position:absolute; opacity:0; }
+    .seg span { display:block; text-align:center; padding:10px 8px; border:1px solid #444; border-radius:10px; color:var(--fg); }
+    .seg input:checked + span { background:var(--ok); border-color:var(--ok); color:#03140b; font-weight:700; }
+    .seg input:focus-visible + span { outline:2px solid #fff; }
+    .songs { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .songs[hidden] { display:none; }
+    .song { display:flex; align-items:center; gap:8px; }
+    .song label { flex:1; } .song small { display:block; opacity:.75; font-size:.8rem; }
+    .song button { padding:8px 12px; min-width:48px; }
     h1 { font-size:1.3rem; margin:0 0 4px; }
     h1 small { font-size:.75rem; font-weight:400; color:var(--muted); margin-left:6px; }
     h2 { font-size:1.1rem; margin:20px 0 6px; }
@@ -104,9 +118,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.22</small></h1>
+    <h1>Salsa Sync <small id="version">v2.23</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -117,7 +131,7 @@
       <p>Bluetooth headphones and speakers play the music late, which makes every step look late. Run Audio sync in Settings
          (or from the menu) once for each pair of headphones or speakers: march on the spot to 16 clicks and it measures the delay.
          Filming from slightly to one side helps when your feet cross in front of each other.</p>
-      <p>Music (in Settings): the built-in salsa band works at any tempo. The real songs are free-to-share recordings from the
+      <p>Music: tapping Start session lets you pick Beat only, the built-in Salsa band (any tempo) or a real song, plus the tempo and length. The air menu's Session button reuses your last choice. The real songs are free-to-share recordings from the
          <a href="https://freemusicarchive.org/">Free Music Archive</a>: "Cupido" and "Vamos A Tocar Sonero" by Frank Guerrero y Su Grupo Aché
          (<a href="https://creativecommons.org/licenses/by-nc-nd/3.0/">CC BY-NC-ND 3.0</a>, played unchanged at their own tempo) and
          "La Mujer de Antonio" by SONGO 21 (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/">CC BY-NC-SA 3.0</a>, sped up or slowed down for each tempo).
@@ -136,7 +150,7 @@
       <div id="resultCard" class="resultCard" hidden><button id="rcClose">✕</button><span id="rcText"></span></div>
       <div id="menu" class="menu" hidden>
         <div class="menuTitle" id="menuTitle">Hold a hand over a button</div>
-        <button class="tile left" data-page="main" data-act="session">▶ Session</button>
+        <button class="tile left" data-page="main" data-act="session">▶ Session <b id="tSession">Salsa band · 30 s</b></button>
         <button class="tile right" data-page="main" data-act="check">👣 Step check</button>
         <button class="tile left" data-page="main" data-act="settings">⚙ Settings <b><span class="tTempo">160</span> · <span class="tLen">30 s</span></b></button>
         <button class="tile right" data-page="main" data-act="close">✕ Close</button>
@@ -186,12 +200,42 @@
   </div>
 </main>
 
+<!-- Opens when you tap Start session: what to dance to and for how long. The air menu's Session tile skips this and
+     reuses your last choice, because you can't tap from across the room. -->
+<dialog id="setupDlg" class="settingsDlg">
+  <h2>Session</h2>
+  <h3>Music</h3>
+  <div class="seg">
+    <label><input type="radio" name="kind" value="beat"><span>Beat only</span></label>
+    <label><input type="radio" name="kind" value="band"><span>Salsa band</span></label>
+    <label><input type="radio" name="kind" value="song"><span>Song</span></label>
+  </div>
+  <p id="kindNote" class="legend"></p>
+  <div id="songs" class="songs" hidden>
+    <div class="song"><label><input type="radio" name="song" value="cupido"> Cupido <small>Frank Guerrero y Su Grupo Aché · 170 BPM</small></label><button data-sample="cupido" aria-label="Play a sample of Cupido">▶</button></div>
+    <div class="song"><label><input type="radio" name="song" value="vamos"> Vamos A Tocar Sonero <small>Frank Guerrero y Su Grupo Aché · 190 BPM</small></label><button data-sample="vamos" aria-label="Play a sample of Vamos A Tocar Sonero">▶</button></div>
+    <div class="song"><label><input type="radio" name="song" value="mujer"> La Mujer de Antonio <small>SONGO 21 · any tempo</small></label><button data-sample="mujer" aria-label="Play a sample of La Mujer de Antonio">▶</button></div>
+  </div>
+  <h3>Tempo</h3>
+  <div id="tempoPick" class="seg">
+    <label><input type="radio" name="bpm" value="140"><span>140</span></label>
+    <label><input type="radio" name="bpm" value="160"><span>160</span></label>
+    <label><input type="radio" name="bpm" value="180"><span>180</span></label>
+    <label><input type="radio" name="bpm" value="200"><span>200</span></label>
+  </div>
+  <p id="songTempo" class="legend" hidden></p>
+  <h3>Length</h3>
+  <div class="seg">
+    <label><input type="radio" name="dur" value="20"><span>20 s</span></label>
+    <label><input type="radio" name="dur" value="30"><span>30 s</span></label>
+    <label><input type="radio" name="dur" value="60"><span>60 s</span></label>
+  </div>
+  <form method="dialog"><button value="cancel">Cancel</button><button id="setupStart" class="primary" value="start">Start</button></form>
+</dialog>
+
 <dialog id="settingsDlg" class="settingsDlg">
   <h2>Settings</h2>
   <div class="row">
-    <label>Tempo <select id="bpm"><option>140</option><option selected>160</option><option>180</option><option>200</option></select> BPM</label>
-    <label>Length <select id="dur"><option value="20">20 s</option><option value="30" selected>30 s</option><option value="60">60 s</option></select></label>
-    <label>Music <select id="music"><option value="band" selected>Salsa band</option><option value="rhythm">Rhythm only</option><option value="cupido">Song: Cupido (170 BPM)</option><option value="vamos">Song: Vamos A Tocar Sonero (190 BPM)</option><option value="mujer">Song: La Mujer de Antonio</option></select></label>
     <label><input type="checkbox" id="voice" checked> Voice</label>
   </div>
   <h3>Audio sync <small>for your headphones or speakers</small></h3>
@@ -689,23 +733,69 @@
   //   The others have one copy per tempo, sped up or slowed down with the pitch kept the same.
   let songList = null;
   const songCache = {};
-  const isSong = id => !["band", "rhythm"].includes(id);
+  const SONGS = ["cupido", "vamos", "mujer"];
+  const isSong = id => SONGS.includes(id);
   async function loadSong(id, bpm) {
     songList ??= await (await fetch("music/songs.json")).json();
     const song = songList[id], f = song.fixedTempo ? song.files.any : song.files[bpm];
     songCache[f.file] ??= await audioCtx.decodeAudioData(await (await fetch(f.file)).arrayBuffer());
     return { ...f, buffer: songCache[f.file], title: song.title };
   }
-  // A fixed-tempo song decides the tempo; otherwise it's the Tempo setting.
-  const SONG_BPM = { cupido: 170, vamos: 190 };
-  const chosenBpm = () => SONG_BPM[$("music").value] ?? Number($("bpm").value);
-  function setMusic(id) {
-    if (![...$("music").options].some(o => o.value === id)) id = "band";
-    $("music").value = id; $("bpm").disabled = !!SONG_BPM[id];   // a fixed-tempo song sets its own tempo
-    try { localStorage.setItem("music", id); } catch {}
-    updateTiles();
+  // ---------- Session choices: music, tempo, length ----------
+  // music is "beat" (cowbell only), "band" (the built-in salsa band) or a song's id. Remembered on this device, so
+  // the air menu's Session tile can start straight away with your last choice.
+  const SONG_BPM = { cupido: 170, vamos: 190 };   // fixed-tempo songs decide the tempo themselves
+  const BPMS = [140, 160, 180, 200], DURS = [20, 30, 60];
+  const choice = { music: "band", bpm: 160, dur: 30 };
+  try { Object.assign(choice, JSON.parse(localStorage.getItem("choice")) || {}); } catch {}
+  if (!["beat", "band", ...SONGS].includes(choice.music)) choice.music = "band";
+  const chosenBpm = () => SONG_BPM[choice.music] ?? choice.bpm;
+  const musicName = () => ({ beat: "Beat only", band: "Salsa band", cupido: "Cupido", vamos: "Vamos", mujer: "La Mujer" })[choice.music];
+  function saveChoice() { try { localStorage.setItem("choice", JSON.stringify(choice)); } catch {} updateTiles(); }
+
+  // The setup dialog shows the current choice; each tap changes it straight away.
+  const pick = (name, value) => { const r = document.querySelector(`input[name=${name}][value="${value}"]`); if (r) r.checked = true; };
+  function showSetup() {
+    const song = isSong(choice.music), fixed = SONG_BPM[choice.music];
+    pick("kind", song ? "song" : choice.music); pick("song", song ? choice.music : ""); pick("bpm", choice.bpm); pick("dur", choice.dur);
+    $("songs").hidden = !song;
+    $("kindNote").textContent = { beat: "Just a cowbell on every beat, louder on the 1 and the 5.",
+      band: "Cowbell, clave, conga, piano and bass, made by the app. Works at any tempo.",
+      song: "A real salsa recording. Tap ▶ to hear a bit of it." }[song ? "song" : choice.music];
+    // Tempo: you pick it, unless the song has its own.
+    $("tempoPick").hidden = !!fixed; $("songTempo").hidden = !fixed;
+    $("songTempo").textContent = fixed ? `${fixed} BPM, set by the song.` : "";
   }
-  $("music").addEventListener("change", e => setMusic(e.target.value));
+  document.querySelectorAll("#setupDlg input").forEach(r => r.addEventListener("change", () => {
+    if (r.name === "kind") choice.music = r.value === "song" ? (isSong(choice.music) ? choice.music : "cupido") : r.value;
+    else if (r.name === "song") choice.music = r.value;
+    else choice[r.name] = Number(r.value);
+    saveChoice(); showSetup();
+  }));
+
+  // ▶ plays 8 seconds of a song (from the point a session would start), tap again to stop.
+  // sample is the one playing (or loading); stopping clears it, so a sample that finishes loading late doesn't play.
+  let sample = null;
+  function stopSample() { if (sample) { sample.src?.stop(); sample.btn.textContent = "▶"; sample = null; } }
+  document.querySelectorAll("[data-sample]").forEach(btn => btn.addEventListener("click", async () => {
+    const was = sample?.btn; stopSample(); if (was === btn) return;
+    audioCtx ??= new AudioContext({ latencyHint: "interactive" }); await audioCtx.resume();
+    const mine = sample = { btn }; btn.textContent = "…";
+    try {
+      const song = await loadSong(btn.dataset.sample, choice.bpm);
+      if (sample !== mine) return;   // stopped, or another sample picked, while it loaded
+      const src = audioCtx.createBufferSource(), vol = audioCtx.createGain(), t = audioCtx.currentTime;
+      src.buffer = song.buffer; src.connect(vol).connect(audioCtx.destination);
+      vol.gain.setValueAtTime(0.5, t); vol.gain.setValueAtTime(0.5, t + 7); vol.gain.linearRampToValueAtTime(0, t + 8);   // fade out
+      src.start(t, song.beats[0]); src.stop(t + 8);
+      mine.src = src; btn.textContent = "■";
+      src.onended = () => { if (sample?.src === src) { btn.textContent = "▶"; sample = null; } };
+    } catch { if (sample === mine) sample = null; btn.textContent = "▶"; statusEl.textContent = "Couldn't load the sample. Check your internet connection."; }
+  }));
+  $("setupDlg").addEventListener("close", () => {
+    stopSample();
+    if ($("setupDlg").returnValue === "start") beginSession();
+  });
 
   // Convert a time on the audio clock to the same clock the camera frames use.
   function audioToPerf(audioTime) {
@@ -740,7 +830,7 @@
     try { localStorage.setItem("audioDelayMs", audioDelay); } catch {}
   }
   setDelay(audioDelay);
-  try { setMusic(localStorage.getItem("music") || "band"); } catch { setMusic("band"); }
+  updateTiles();
   $("delay").addEventListener("input", e => setDelay(Number(e.target.value)));
 
   // Audio sync: body check first (so steps are counted properly), then the 16 clicks.
@@ -769,7 +859,7 @@
   }
 
   // ---------- Session ----------
-  let wakeLock = null, endTimer = null;
+  let wakeLock = null, endTimer = null, pumpTimer = null;
 
   // mode "salsa" is the normal session; "sync" is the audio sync march (16 plain clicks).
   async function startSession(mode = "salsa", getReadySec = GET_READY_SEC) {
@@ -779,14 +869,14 @@
     master = newMaster();
     try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
 
-    const music = sync ? "rhythm" : $("music").value;
+    const music = sync ? "beat" : choice.music;
     let song = null;
     if (isSong(music)) {
       statusEl.textContent = "Loading the song…"; showPrompt("Loading the song…", "amber");
       try { song = await loadSong(music, chosenBpm()); }
       catch { statusEl.textContent = "Couldn't load the song. Check your internet connection, or pick Salsa band in Settings."; showPrompt(null); return; }
     }
-    const bpm = sync ? SYNC_BPM : song ? song.bpm : Number($("bpm").value), seconds = Number($("dur").value);
+    const bpm = sync ? SYNC_BPM : song ? song.bpm : choice.bpm, seconds = choice.dur;
     const beatSec = 60 / bpm;
     const practiceBeats = sync ? 0 : PRACTICE_BEATS;
     let nBeats = COUNT_IN + practiceBeats + (sync ? SYNC_BEATS : Math.round(seconds / beatSec));
@@ -800,26 +890,33 @@
       src.start(start, song.beats[0]); src.stop(beatAt(nBeats - 1) + beatSec);
     }
 
-    const audioBeats = [];
+    // Each beat's sounds are queued here and handed to the audio system a couple of seconds ahead (see pump below),
+    // not all at once: a 60 s session with the band is thousands of notes, and creating them in one go can stutter.
+    const audioBeats = [], queue = [];
     for (let k = 0; k < nBeats; k++) {
       const t = beatAt(k);
       const inCount = k < COUNT_IN;
       const practice = !inCount && k < COUNT_IN + practiceBeats;
       const pos = (k - COUNT_IN + 8 * 100) % 8;           // 0..7 within the 8-count
       const count = inCount ? 5 + k : pos + 1;            // count-in shows 5,6,7,8
-      if (!song) cowbell(t, count === 1 || count === 5);
-      if (!inCount && !sync && !song) {
-        for (const c of CLAVE_23) if (Math.floor(c) === pos) clave(t + (c - pos) * beatSec);
-        if (CONGA.includes(pos)) conga(t);
-        if (music === "band") band(t, pos, beatSec);
-      }
+      queue.push({ t, play: () => {
+        if (!song) cowbell(t, count === 1 || count === 5);
+        if (!inCount && music !== "beat" && !song) {
+          for (const c of CLAVE_23) if (Math.floor(c) === pos) clave(t + (c - pos) * beatSec);
+          if (CONGA.includes(pos)) conga(t);
+          if (music === "band") band(t, pos, beatSec);
+        }
+      } });
       // Blips on "5, 6, 7, 8" of the count-in and of the last practice basic, then on the 1 that follows each.
       const realCountdown = !sync && k >= COUNT_IN + practiceBeats - 4 && k < COUNT_IN + practiceBeats;
       const cue = inCount || realCountdown ? String(count) : null;
       const startHere = k === COUNT_IN || (!sync && k === COUNT_IN + practiceBeats);   // the first 1: step now
-      if (cue || startHere) blip(t, startHere, realCountdown || k === COUNT_IN + practiceBeats);
+      if (cue || startHere) { const real = realCountdown || k === COUNT_IN + practiceBeats; queue.push({ t, play: () => blip(t, startHere, real) }); }
       audioBeats.push({ audio: t, count, countIn: inCount, practice, cue, startHere });
     }
+    let next = 0;
+    const pump = () => { while (next < queue.length && queue[next].t < audioCtx.currentTime + 2) queue[next++].play(); };
+    pump(); pumpTimer = setInterval(pump, 250);
 
     sessionBtn.disabled = true; sessionBtn.textContent = "Recording…"; checkBtn.disabled = true; $("resultCard").hidden = true;
     // Map beat times onto the camera clock once audio is flowing.
@@ -870,7 +967,7 @@
   // Stopping early ends the session now and keeps what was recorded so far.
   // (There's no pause/resume: the beats are scheduled in advance, so a fresh session is simpler.)
   function stopSession() {
-    clearTimeout(endTimer);
+    clearTimeout(endTimer); clearInterval(pumpTimer);
     if (performance.now() < session.startPerf) {   // stopped before the real part began: nothing to keep
       session = null; master.disconnect(); wakeLock?.release?.(); wakeLock = null; showPrompt("Cancelled", "", { hideAfter: 2000 });
       sessionBtn.textContent = "Start session"; checkBtn.disabled = false; statusEl.textContent = "Session cancelled.";
@@ -883,7 +980,7 @@
   }
 
   function endSession() {
-    const s = session; session = null; lastSession = s;
+    const s = session; session = null; lastSession = s; clearInterval(pumpTimer);
     s.frameClock = frameClock;
     master.disconnect();
     wakeLock?.release?.(); wakeLock = null;
@@ -1168,20 +1265,21 @@
   }
   function updateTiles() {
     document.querySelectorAll(".tTempo").forEach(b => b.textContent = chosenBpm());
-    document.querySelectorAll(".tLen").forEach(b => b.textContent = $("dur").selectedOptions[0].text);
+    document.querySelectorAll(".tLen").forEach(b => b.textContent = `${choice.dur} s`);
+    $("tSession").textContent = `${musicName()} · ${choice.dur} s`;
     $("tSync").textContent = `${audioDelay} ms`;
   }
   function menuAction(act) {
     menuActiveAt = performance.now();
     // Plus and minus move one option along, stopping at the ends.
-    const step = (sel, by) => { sel.selectedIndex = Math.min(sel.options.length - 1, Math.max(0, sel.selectedIndex + by)); };
-    if (act === "session") { closeMenu(); showPrompt("Starting…", "amber", { hideAfter: 1500 }); sessionBtn.click(); }
+    const step = (list, now, by) => list[Math.min(list.length - 1, Math.max(0, list.indexOf(now) + by))];
+    if (act === "session") { closeMenu(); showPrompt("Starting…", "amber", { hideAfter: 1500 }); beginSession(); }   // last choice, no dialog
     else if (act === "check") { closeMenu(); startCheck(); }
     else if (act.startsWith("tempo")) {
-      if (SONG_BPM[$("music").value]) speak(`This song is always ${chosenBpm()}`);   // fixed-tempo song: can't change
-      else { step($("bpm"), act.endsWith("+") ? 1 : -1); speak(`Tempo ${$("bpm").value}`); }
+      if (SONG_BPM[choice.music]) speak(`This song is always ${chosenBpm()}`);   // fixed-tempo song: can't change
+      else { choice.bpm = step(BPMS, choice.bpm, act.endsWith("+") ? 1 : -1); saveChoice(); speak(`Tempo ${choice.bpm}`); }
     }
-    else if (act.startsWith("length")) { step($("dur"), act.endsWith("+") ? 1 : -1); speak(`${$("dur").value} seconds`); }
+    else if (act.startsWith("length")) { choice.dur = step(DURS, choice.dur, act.endsWith("+") ? 1 : -1); saveChoice(); speak(`${choice.dur} seconds`); }
     else if (act === "sync") { closeMenu(); startSync(); }
     else if (act === "settings") { showMenuPage("settings"); speak("Settings."); }
     else if (act === "back") showMenuPage("main");
@@ -1271,11 +1369,12 @@
     });
   }
   function cancelCalibration() { stopCheck({ quiet: true }); showPrompt("Cancelled", "", { hideAfter: 2000 }); }
+  // Start: body check (unless Auto is off), then the music.
+  function beginSession() { if (autoLift()) startCheck("salsa"); else runSession("salsa"); }
   sessionBtn.addEventListener("click", () => {
     if (session) stopSession();
     else if (checking && calib.forSession) cancelCalibration();
-    else if (autoLift()) startCheck("salsa");
-    else runSession("salsa");
+    else { showSetup(); $("setupDlg").showModal(); }   // pick music, tempo and length first
   });
 </script>
 </body>
