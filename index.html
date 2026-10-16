@@ -64,7 +64,6 @@
     .scroll { overflow-x:auto; border-radius:8px; }
     .legend { font-size:.85rem; color:var(--muted); margin-top:6px; }
     .legend b.l { color:var(--left); } .legend b.r { color:var(--right); }
-    .feedback { color:var(--fg); font-size:1.05rem; white-space:pre-line; }
     .feet { position:absolute; top:10px; left:14px; display:flex; gap:8px; }
     .feet[hidden] { display:none; }
     /* Big prompts, readable from across the room. Colour = state: amber get ready, green go, red can't see you. */
@@ -105,6 +104,48 @@
     .feet span.hit { transition:none; }
     .feet span.l.hit { background:var(--left); } .feet span.r.hit { background:var(--right); }
     .menu:not([hidden]) ~ .fullBtn { display:none; }   /* keep the corner free for the Close tile */
+    /* Results summary: a tip, a score out of 100, four tiles and your typical basic. Lights: green good, amber close, red off. */
+    #results { --good:#2fb877; --warn:#f0b429; --bad:#e5484d; --line:#2c2f35; --soft:#c9cdd3; --ghost:#5b616b; }
+    .sum { display:flex; flex-direction:column; gap:16px; }
+    .eyebrow { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px 18px; }
+    .tipCard h3 { margin:6px 0; font-size:1.5rem; line-height:1.15; }
+    .tipCard p { margin:0; color:var(--soft); }
+    .pick { cursor:pointer; }
+    .pick[aria-pressed="true"] { border-color:var(--soft); }
+    .pick:focus-visible { outline:2px solid var(--warn); outline-offset:2px; }
+    .scoreNum { display:flex; align-items:baseline; gap:4px; margin:4px 0 8px; }
+    .scoreNum b { font-size:2.6rem; line-height:1; font-weight:900; } .scoreNum span { color:var(--muted); font-weight:700; }
+    .bar { height:8px; border-radius:99px; background:var(--line); overflow:hidden; } .bar i { display:block; height:100%; border-radius:99px; }
+    .kpis { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .kpi { display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; padding:14px 8px; }
+    .kpi .name { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+    .kpi .big { font-size:1.05rem; font-weight:800; line-height:1.2; }
+    .kpi .pts { font-size:.8rem; color:var(--muted); font-variant-numeric:tabular-nums; }
+    .light { width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-weight:900; font-size:.85rem; color:#0b0c0e; background:var(--ghost); }
+    .light.ok { background:var(--good); } .light.warn { background:var(--warn); } .light.bad { background:var(--bad); color:#fff; }
+    .bar i.ok { background:var(--good); } .bar i.warn { background:var(--warn); } .bar i.bad { background:var(--bad); }
+    /* The typical basic: beats 1 to 8 across, dashed circles where steps go, grey boxes for the pauses on 4 and 8. */
+    #typLabel { text-align:center; margin-bottom:8px; }
+    .typ { position:relative; height:46px; margin:0 12px; }
+    .typ.scale { height:16px; }
+    .typ.scale span { position:absolute; transform:translateX(-50%); font-size:.7rem; color:var(--muted); }
+    .typ .zone { position:absolute; top:0; height:28px; background:#ffffff0d; border-radius:6px; }
+    .typ .g, .typ .s { position:absolute; top:14px; width:18px; height:18px; border-radius:50%; transform:translate(-50%,-50%); }
+    .typ .g { border:1.5px dashed var(--ghost); }
+    .typ .s { z-index:2; display:grid; place-items:center; font-size:.62rem; font-weight:800; color:#fff; background:#dfe2e7; }
+    .typ .s.n { color:#15171a; } .typ .s.ok { background:var(--good); } .typ .s.warn { background:var(--warn); } .typ .s.bad { background:var(--bad); }
+    .typ .gap { position:absolute; top:10px; height:8px; border-radius:4px; }
+    .typ .gap.ok { background:var(--good); } .typ .gap.warn { background:var(--warn); } .typ .gap.bad { background:var(--bad); }
+    .typ .gapT { position:absolute; top:30px; transform:translateX(-50%); font-size:.68rem; color:var(--soft); white-space:nowrap; }
+    .tbar { display:grid; grid-template-columns:44px 1fr 52px; gap:8px; align-items:center; font-size:.8rem; color:var(--muted); margin:6px 0; }
+    .tbar em { font-style:normal; text-align:right; color:var(--soft); }
+    .tbar b { display:block; position:relative; height:14px; border-radius:4px; background:#dfe2e7; }
+    .tbar b.ok { background:var(--good); } .tbar b.warn { background:var(--warn); } .tbar b.bad { background:var(--bad); }
+    .tbar b i { position:absolute; top:0; bottom:0; width:1px; background:#0006; }
+    #fullAnalysis { margin-top:16px; }
+    #fullAnalysis > summary { padding:12px; border-radius:12px; text-align:center; font-weight:700; color:var(--bg); background:var(--fg); list-style:none; }
+    #fullAnalysis[open] > summary { margin-bottom:12px; }
     /* Laptop (wide and landscape): video on the left filling the height, controls on the right. Last, so it wins. */
     @media (min-width: 900px) and (orientation: landscape) {
       .layout { grid-template-columns:minmax(0, 1fr) 340px; }
@@ -117,9 +158,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.28</small></h1>
+    <h1>Salsa Sync <small id="version">v2.29</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -196,13 +237,32 @@
 
       <section id="results" hidden>
         <h2>Last session</h2>
-        <p id="feedback" class="feedback"></p>
-        <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas>
-        <p id="summary"></p>
-        <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
-        <div class="legend">Grey lines are beats; the thicker ones are the 1 and the 5. Each ▲ along the bottom is a detected step
-          (<b class="l">left</b> or <b class="r">right</b> foot), placed where the foot comes back down, because the step
-          counts when your weight lands, not when your foot is highest. Steps on time sit on a beat line.</div>
+        <!-- Summary: tap the score or a tile to see it on your typical basic; tap it again to go back. -->
+        <div class="sum">
+          <div class="card tipCard" aria-live="polite"><span class="eyebrow">Next time</span><h3 id="tipH"></h3><p id="tipP"></p></div>
+          <div class="card pick" data-f="score" role="button" tabindex="0">
+            <span class="eyebrow">Score</span><div class="scoreNum"><b id="scoreN"></b><span>/100</span></div><div class="bar"><i id="scoreBar"></i></div>
+          </div>
+          <div class="kpis">
+            <div class="card kpi pick" data-f="t" role="button" tabindex="0"><span class="light" id="tL"></span><span class="name">Tempo</span><span class="big" id="tBig"></span><span class="pts" id="tPts"></span></div>
+            <div class="card kpi pick" data-f="p" role="button" tabindex="0"><span class="light" id="pL"></span><span class="name">Pause length</span><span class="big" id="pBig"></span><span class="pts" id="pPts"></span></div>
+            <div class="card kpi pick" data-f="o" role="button" tabindex="0"><span class="light" id="oL"></span><span class="name">On the beat</span><span class="big" id="oBig"></span><span class="pts" id="oPts"></span></div>
+            <div class="card kpi pick" data-f="r" role="button" tabindex="0"><span class="light" id="rL"></span><span class="name">Right beat</span><span class="big" id="rBig"></span><span class="pts" id="rPts"></span></div>
+          </div>
+          <div id="typBox">
+            <div class="eyebrow" id="typLabel"></div>
+            <div class="typ scale" id="typScale"></div>
+            <div id="typical"></div>
+          </div>
+        </div>
+        <details id="fullAnalysis"><summary>See full analysis</summary>
+          <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas>
+          <p id="summary"></p>
+          <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
+          <div class="legend">Grey lines are beats; the thicker ones are the 1 and the 5. Each ▲ along the bottom is a detected step
+            (<b class="l">left</b> or <b class="r">right</b> foot), placed where the foot comes back down, because the step
+            counts when your weight lands, not when your foot is highest. Steps on time sit on a beat line.</div>
+        </details>
         <div class="controls" style="margin-top:10px"><button id="downloadBtn">Download session data (JSON)</button></div>
       </section>
 
@@ -546,15 +606,6 @@
     return { yourBasicMs: yourMs, musicBasicMs: Math.round(basicMs), percent: Math.round((basicMs / yourMs - 1) * 100) };
   }
 
-  function tempoSentence(tempo) {
-    if (!tempo) return "Speed: I couldn't tell this time. Your steps didn't settle into a repeating basic (the 8-beat salsa pattern), so dance it the whole way through.";
-    const yours = (tempo.yourBasicMs / 1000).toFixed(2), music = (tempo.musicBasicMs / 1000).toFixed(2);
-    if (Math.abs(tempo.percent) <= 3) return `Speed: just right. One basic (the 8-beat pattern) took you ${yours} s, and the music's takes ${music} s.`;
-    return tempo.percent > 0
-      ? `Speed: too fast. One basic (the 8-beat pattern) took you ${yours} s, but the music's takes ${music} s. Slow down a little.`
-      : `Speed: too slow. One basic (the 8-beat pattern) took you ${yours} s, but the music's takes ${music} s. Speed up a little.`;
-  }
-
   // How close your landings were to the beat. An average would let early and late steps cancel out (half 100 ms
   // early and half 100 ms late averages to "right on the beat"), so instead each step goes in one of three groups:
   // early, on the beat (within ON_TIME_MS), or late. Plus your habit (the middle offset): do you tend to land early or late?
@@ -596,6 +647,149 @@
     return { pauses: [pause.p, pause.p + 4], beatsOff: late === 3 ? -1 : late, good: false,
              text: `Right beats: not yet. You paused on ${pause.p} and ${pause.p + 4}, but the pauses go on 4 and 8, so you're ${off}. Take your first step on the 1, straight after the count-in.` };
   }
+
+  // ---------- Results summary ----------
+  // Cut the recorded part into basics of 8 beats, each starting on a 1. A step belongs to the basic whose 1 it follows,
+  // from half a beat before the 1 (an early first step) up to half a beat before the next 1.
+  // pos = beats after the 1, so a perfect basic is 0 1 2 4 5 6 (counts 1 2 3, 5 6 7).
+  const SLOTS = [0, 1, 2, 4, 5, 6];
+  const median = a => { const v = a.filter(x => x != null).sort((x, y) => x - y); return v.length ? v[v.length >> 1] : null; };
+  const clamp01 = x => Math.max(0, Math.min(1, x));
+  const tier = share => share >= 0.67 ? "ok" : share >= 0.34 ? "warn" : "bad";   // thirds: green, amber, red
+  const tempoBand = bpm => Math.round(bpm * 0.07 / 5) * 5;   // "right speed" margin: ±10 BPM up to 170, ±15 from 180
+
+  function cutBasics(s) {
+    const P = 60000 / s.bpm, delay = s.audioDelayMs ?? 0;
+    const real = s.beats.filter(b => !b.countIn && !b.practice);
+    const first = real.findIndex(b => b.count === 1), basics = [];
+    if (first < 0) return basics;
+    for (let k = first; k + 7 < real.length; k += 8) {   // whole basics only
+      const one = real[k].t + delay;
+      const steps = s.steps.filter(st => st.t >= one - P / 2 && st.t < one + 7.5 * P);
+      basics.push({ dots: steps.map(st => (st.t - one) / P), feet: steps.map(st => st.foot === "left" ? "L" : "R") });
+    }
+    return basics;
+  }
+
+  // Your typical basic: the middle (median) position of each of the 6 steps, over every basic with exactly 6 steps.
+  // onShare / rightShare: for each step, the share of basics where it landed within 80 ms of a beat / on its own count.
+  // At least half the basics (and 2) must have 6 steps, or it isn't typical: a march has 8 steps a basic.
+  function typicalBasic(basics, bpm) {
+    const S = basics.filter(b => b.dots.length === 6), P = 60000 / bpm;
+    if (S.length < 2 || S.length < basics.length / 2) return null;
+    const share = test => SLOTS.map((_, k) => S.filter(b => test(b.dots[k], k)).length / S.length);
+    const dots = SLOTS.map((_, k) => median(S.map(b => b.dots[k])));
+    const onShare = share(p => Math.abs(p - Math.round(p)) * P <= ON_TIME_MS);
+    return {
+      n: S.length, dots, onShare,
+      feet: SLOTS.map((_, k) => S.filter(b => b.feet[k] === "L").length >= S.length / 2 ? "L" : "R"),
+      rightShare: share((p, k) => Math.round(p) === SLOTS[k]),
+      on: onShare.filter(v => v >= 0.67).length,                                 // steps on the beat most of the time
+      shift: median(dots.map((p, k) => Math.round(p) - SLOTS[k])),               // counts late (+) or early (−)
+      pause: ((dots[3] - dots[2]) + (8 + dots[0] - dots[5])) / 2,                // beats held on 4 and 8 (should be 2)
+    };
+  }
+
+  // How long your basic takes, from the steps: each half-basic runs from the first step after a pause to the first step
+  // after the next pause. Two halves make a basic. Only trusted when there's a typical basic: with messy steps the
+  // "pauses" are just missed steps, so it falls back to the whole-body tempo match (tempoMatch).
+  function basicLengthMs(s, T) {
+    const P = 60000 / s.bpm, starts = [];
+    s.steps.forEach((st, i) => { if (i === 0 || st.t - s.steps[i - 1].t > 1.4 * P) starts.push(st.t); });
+    const halves = starts.slice(1).map((t, i) => t - starts[i]).filter(h => h > 2.5 * P && h < 6 * P);
+    return T && halves.length >= 4 ? 2 * median(halves) : s.tempo?.yourBasicMs ?? null;
+  }
+
+  // Everything on the summary comes from the typical basic, so the words, the points and the colours always agree.
+  // Each tile is worth 25 points. A tile is green when its message is the good one, otherwise amber if it got
+  // at least a third of its points, red if not. Order: Tempo, Pause length, On the beat, Right beat (easiest first).
+  function summarise(s) {
+    const T = typicalBasic(cutBasics(s), s.bpm), bpm = Math.round(s.bpm), band = tempoBand(bpm);
+    const yoursMs = basicLengthMs(s, T), musicMs = 8 * 60000 / s.bpm;
+    const yourBpm = yoursMs ? Math.round(s.bpm * musicMs / yoursMs) : null;
+    const dotPoints = shares => shares.reduce((sum, v) => sum + (v >= 0.67 ? 1 : v >= 0.34 ? 0.5 : 0), 0) / 6;
+    const tiles = {
+      t: yourBpm == null ? null : {
+        good: Math.abs(yourBpm - bpm) <= band, part: clamp01(1 - (Math.abs(yourBpm - bpm) - band) / band),   // 0 at twice the band
+        text: Math.abs(yourBpm - bpm) <= band ? "Right speed" : yourBpm > bpm ? "Too fast" : "Too slow" },
+      p: !T ? null : {
+        good: Math.abs(T.pause - 2) <= 0.25, part: clamp01(1 - (Math.abs(T.pause - 2) - 0.25) / 0.75),     // 0 at 1 beat off
+        text: Math.abs(T.pause - 2) <= 0.25 ? "Just right" : T.pause < 2 ? "Too short" : "Too long" },
+      o: !T ? null : { good: T.on === 6, part: dotPoints(T.onShare), text: `${T.on}/6 on beat` },
+      r: !T ? null : { good: T.shift === 0, part: dotPoints(T.rightShare),
+        text: T.shift === 0 ? "In time" : `${Math.abs(T.shift)} beat${Math.abs(T.shift) > 1 ? "s" : ""} ${T.shift > 0 ? "late" : "early"}` },
+    };
+    for (const t of Object.values(tiles)) if (t) { t.points = Math.round(25 * t.part); t.light = t.good ? "ok" : t.part >= 0.34 ? "warn" : "bad"; }
+    const all = Object.values(tiles);
+    const score = all.every(Boolean) ? Math.round(25 * all.reduce((sum, t) => sum + t.part, 0)) : null;
+    return { T, bpm, band, yourBpm, yoursMs, musicMs, tiles, score, tip: nextTip(T, tiles, bpm, yourBpm, s.bpm) };
+  }
+
+  // One tip: the first tile that isn't good, in tile order.
+  function nextTip(T, tiles, bpm, yourBpm, exactBpm) {
+    if (tiles.t && !tiles.t.good) return [yourBpm > bpm ? "Slow down to the music" : "Speed up to the music", `You danced at about ${yourBpm} BPM; the music is ${bpm}.`];
+    if (!T) return ["Dance the 6-step basic", "Most of your basics didn't have 6 steps that I could see. Keep your whole body in view and dance the basic until the music stops."];
+    if (T.pause < 1.75) return ["Hold the pause for two full beats", "You step into the next half early. Freeze on 4 and 8."];
+    if (T.pause > 2.25) return ["Don't wait too long", "Step again right on 1 and 5."];
+    if (T.on < 6) {
+      const k = T.onShare.indexOf(Math.min(...T.onShare)), near = Math.round(T.dots[k]);
+      return [`Your step on ${((near % 8) + 8) % 8 + 1} lands ${T.dots[k] > near ? "late" : "early"}`, "Listen for the cowbell and land with it."];
+    }
+    if (T.shift > 0) return ["Start on the 1", `Your steps land ${T.shift === 1 ? "one count" : T.shift + " counts"} late. Step right on "Go!".`];
+    if (T.shift < 0) return ["Wait for the 1", "You step in before the 1. Let the count land, then step."];
+    return ["Clean!", exactBpm < 200 ? `Try ${bpm + 10} BPM next.` : "That's the top tempo. Try a song next."];
+  }
+
+  // The typical basic strip. focus = what was tapped: score (neutral), t tempo, p pause, o on the beat, r right beat.
+  const LO = -0.5, HI = 7.5, X = b => ((b - LO) / (HI - LO)) * 100;   // beats → % across the strip
+  let summary = null, focus = "score";
+  function typicalStrip(r, mode) {
+    const T = r.T;
+    if (mode === "t") {   // two bars on the same scale: the music's basic and yours, a tick on each beat
+      if (!r.yoursMs) return `<p>I couldn't measure how long your basic took.</p>`;
+      const ticks = [...Array(9).keys()].map(i => `<i style="left:${i / 8 * 100}%"></i>`).join("");
+      const bar = (label, ms, cls) => `<div class="tbar"><span>${label}</span><div><b class="${cls}" style="width:${Math.min(100, ms / r.musicMs * 80)}%">${ticks}</b></div><em>${(ms / 1000).toFixed(2)} s</em></div>`;
+      return bar("Music", r.musicMs, "") + bar("You", r.yoursMs, r.tiles.t.light);
+    }
+    const zones = [3, 7].map(p => `<span class="zone" style="left:${X(p - 0.5)}%;width:${X(p + 0.5) - X(p - 0.5)}%"></span>`).join("");
+    const ghosts = SLOTS.map(p => `<span class="g" style="left:${X(p)}%"></span>`).join("");
+    const colour = j => mode === "o" ? tier(T.onShare[j]) : mode === "r" ? tier(T.rightShare[j]) : "n";
+    const dots = T.dots.map((p, j) => p >= LO && p < HI
+      ? `<span class="s ${colour(j)}" style="left:${X(p)}%" aria-label="${T.feet[j] === "L" ? "left" : "right"} foot">${T.feet[j]}</span>` : "").join("");
+    let gap = "";
+    if (mode === "p") {   // a bar across the pause after step 3
+      const a = Math.max(LO, T.dots[2]), b = Math.min(HI, T.dots[3]);
+      gap = `<span class="gap ${r.tiles.p.light}" style="left:${X(a)}%;width:${X(b) - X(a)}%"></span><span class="gapT" style="left:${X((a + b) / 2)}%">${T.pause.toFixed(1)} beats</span>`;
+    }
+    return `<div class="typ">${zones}${ghosts}${dots}${gap}</div>`;
+  }
+
+  function showSummary() {
+    const r = summary, sym = { ok: "✓", warn: "~", bad: "✗" };
+    $("tipH").textContent = r.tip[0]; $("tipP").textContent = r.tip[1];
+    $("scoreN").textContent = r.score ?? "–";
+    $("scoreBar").style.width = (r.score ?? 0) + "%"; $("scoreBar").className = r.score == null ? "" : tier(r.score / 100);
+    for (const [id, t] of Object.entries(r.tiles)) {
+      $(id + "L").className = "light " + (t?.light ?? ""); $(id + "L").textContent = t ? sym[t.light] : "?";
+      $(id + "Big").textContent = t ? t.text : "Couldn't tell"; $(id + "Pts").textContent = t ? `${t.points} of 25 points` : "";
+    }
+    if (!r.T && focus !== "t") focus = "score";
+    document.querySelectorAll("#results .pick").forEach(el => el.setAttribute("aria-pressed", el.dataset.f === focus));
+    $("typBox").hidden = !r.T && focus !== "t";
+    $("typScale").hidden = focus === "t";
+    $("typLabel").textContent = (r.T ? `Your typical basic (average of ${r.T.n})` : "Your typical basic")
+      + { score: "", t: " · Tempo", p: " · Pause length", o: " · On the beat", r: " · Right beat" }[focus];
+    $("typical").innerHTML = focus === "t" || r.T ? typicalStrip(r, focus) : "";
+  }
+
+  $("typScale").innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(c => `<span style="left:${X(c - 1)}%">${c}</span>`).join("");
+  document.querySelectorAll("#results .pick").forEach(el => {
+    const tap = () => { if (!summary) return; focus = focus === el.dataset.f ? "score" : el.dataset.f; showSummary(); };
+    el.addEventListener("click", tap);
+    el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tap(); } });
+  });
+  // The charts in the full analysis can only be drawn once they're on screen (they take their width from the page).
+  $("fullAnalysis").addEventListener("toggle", () => { if ($("fullAnalysis").open && lastSession?.steps) { drawSession(lastSession); drawSpread(lastSession); } });
 
   // ---------- Charts ----------
   function sizeCanvas(c, w, h) {
@@ -1070,12 +1264,8 @@
     s.report = timingReport(s.steps, nBeats);
     s.tempo = tempoMatch(s);
     s.rightBeats = rightBeats(s.steps, s.beats.filter(b => !b.countIn && !b.practice));
-    // Three separate results: Speed (is your basic the right length), Timing (does each step land on a beat) and
-    // Right beats (are you stepping on the right beats). ✓ / ✗ / ? in front of each.
-    const mark = r => (r.good === true ? "✓ " : r.good === false ? "✗ " : "? ");
-    const speedGood = s.tempo ? Math.abs(s.tempo.percent) <= 3 : undefined;
-    $("feedback").textContent = [mark({ good: speedGood }) + tempoSentence(s.tempo),
-      mark(s.report.unreliable ? {} : s.report) + s.report.text, mark(s.rightBeats) + s.rightBeats.text].join("\n");
+    summary = s.summary = summarise(s); focus = "score";
+    showSummary();
 
     const secs = (s.endPerf - s.startPerf) / 1000;
     const visible = s.frames.filter(f => FOOT_POINTS.every(i => f.pts[i][2] > 0.5)).length;
@@ -1084,7 +1274,7 @@
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
     $("results").hidden = false;
     showPrompt("Done!", "green", { sub: "Your results are on the screen", say: "Done. Your results are on the screen.", important: true, hideAfter: 4000 });
-    drawSession(s); drawSpread(s);
+    if ($("fullAnalysis").open) { drawSession(s); drawSpread(s); }
   }
 
   $("downloadBtn").addEventListener("click", () => {
