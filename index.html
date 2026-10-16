@@ -106,7 +106,7 @@
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
        2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.21</small></h1>
+    <h1>Salsa Sync <small id="version">v2.22</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -186,6 +186,7 @@
   <div class="row">
     <label>Tempo <select id="bpm"><option>140</option><option selected>160</option><option>180</option><option>200</option></select> BPM</label>
     <label>Length <select id="dur"><option value="20">20 s</option><option value="30" selected>30 s</option><option value="60">60 s</option></select></label>
+    <label>Music <select id="music"><option value="band" selected>Salsa band</option><option value="rhythm">Rhythm only</option></select></label>
     <label><input type="checkbox" id="voice" checked> Voice</label>
   </div>
   <h3>Audio sync <small>for your headphones or speakers</small></h3>
@@ -621,6 +622,16 @@
   // ---------- Rhythm (Web Audio) ----------
   let audioCtx = null, master = null;
 
+  // Everything plays into "master", which goes through a limiter: when the clave, conga, bass and piano all hit at
+  // once they'd add up past full volume and crackle, so the limiter turns just those moments down. (Chrome's limiter
+  // delays the sound by about 6 ms; audio sync measures that along with everything else, and it's tiny next to 80 ms.)
+  function newMaster() {
+    const m = audioCtx.createGain(), limiter = audioCtx.createDynamicsCompressor();
+    limiter.threshold.value = -6; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.1;
+    m.gain.value = 0.8; m.connect(limiter).connect(audioCtx.destination);
+    return m;
+  }
+
   function tone(time, { freq, endFreq, type = "sine", gain, decay }) {
     const o = audioCtx.createOscillator(), a = audioCtx.createGain();
     o.type = type; o.frequency.setValueAtTime(freq, time);
@@ -640,6 +651,30 @@
   // Son clave (2-3) and conga open tones, as beat positions within an 8-count (0 = the "1").
   const CLAVE_23 = [1, 2, 4, 5.5, 7];
   const CONGA = [3, 7];   // the 4 and the 8
+
+  // ---------- Salsa band (piano and bass on top of the rhythm) ----------
+  // The classic salsa chord loop I-IV-V-IV in C: C, F, G, F, one chord per 2 beats of the 8-count.
+  // Notes are MIDI numbers (60 = middle C); midiFreq turns them into Hz.
+  const midiFreq = m => 440 * 2 ** ((m - 69) / 12);
+  const CHORDS = [
+    { bass: 36, piano: [60, 64, 67] },   // C  (beats 1-2)
+    { bass: 41, piano: [60, 65, 69] },   // F  (beats 3-4)
+    { bass: 43, piano: [59, 62, 67] },   // G  (beats 5-6)
+    { bass: 41, piano: [60, 65, 69] },   // F  (beats 7-8)
+  ];
+  const chordAt = pos => CHORDS[Math.floor(pos / 2) % 4];
+  // Piano montuno: a chord on every "and" (the off-beats). The "and" just before a chord change already plays the
+  // new chord, which is what gives salsa piano its pushed feel.
+  const PIANO = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5];
+  // Bass tumbao: the bass plays on the "and" of 2 and on 4 (and the same in the second half), each time the root of
+  // the NEXT chord, a little early. It never plays on the 1, so the 1 stays for the dancer's step.
+  const BASS = [1.5, 3, 5.5, 7];
+  const piano = (t, notes) => notes.forEach(m => tone(t, { freq: midiFreq(m), type: "triangle", gain: 0.07, decay: 0.22 }));
+  const bass  = (t, m) => tone(t, { freq: midiFreq(m), type: "triangle", gain: 0.5, decay: 0.35 });
+  function band(t, pos, beatSec) {
+    for (const p of PIANO) if (Math.floor(p) === pos) piano(t + (p - pos) * beatSec, chordAt(Math.ceil(p) % 8).piano);
+    for (const p of BASS)  if (Math.floor(p) === pos) bass(t + (p - pos) * beatSec, chordAt(Math.ceil(p + 0.5) % 8).bass);
+  }
 
   // Convert a time on the audio clock to the same clock the camera frames use.
   function audioToPerf(audioTime) {
@@ -709,10 +744,11 @@
     const sync = mode === "sync";
     if (!audioCtx) { audioCtx = new AudioContext({ latencyHint: "interactive" }); }
     await audioCtx.resume();
-    master = audioCtx.createGain(); master.connect(audioCtx.destination);
+    master = newMaster();
     try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
 
     const bpm = sync ? SYNC_BPM : Number($("bpm").value), seconds = Number($("dur").value);
+    const music = $("music").value;
     const beatSec = 60 / bpm;
     const practiceBeats = sync ? 0 : PRACTICE_BEATS;
     const nBeats = COUNT_IN + practiceBeats + (sync ? SYNC_BEATS : Math.round(seconds / beatSec));
@@ -729,6 +765,7 @@
       if (!inCount && !sync) {
         for (const c of CLAVE_23) if (Math.floor(c) === pos) clave(t + (c - pos) * beatSec);
         if (CONGA.includes(pos)) conga(t);
+        if (music === "band") band(t, pos, beatSec);
       }
       // Blips on "5, 6, 7, 8" of the count-in and of the last practice basic, then on the 1 that follows each.
       const realCountdown = !sync && k >= COUNT_IN + practiceBeats - 4 && k < COUNT_IN + practiceBeats;
@@ -744,7 +781,7 @@
     const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice, cue: b.cue, startHere: b.startHere }));
     const firstReal = beats[COUNT_IN + practiceBeats];
     session = {
-      bpm, beats, frames: [], sync,
+      bpm, beats, frames: [], sync, music,
       audioDelayMs: sync ? 0 : audioDelay,
       startPerf: firstReal.t - 200,                        // only the real part is recorded
       endPerf: beats[beats.length - 1].t + beatSec * 1000,
@@ -876,7 +913,7 @@
   function startCheck(forSession = false) {
     if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
     audioCtx.resume();
-    master = audioCtx.createGain(); master.connect(audioCtx.destination);
+    master = newMaster();
     feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0; $("resultCard").hidden = true;
     calib = { forSession, ready: false, handsWereUp: false, start: null, maxDiff: 0, done: false }; $("calibNote").textContent = "";
     if (!autoLift()) { calib.ready = calib.done = true; showPrompt("Go! Start stepping", "green", { say: "Start stepping.", hideAfter: 2500 }); }   // body check off: use the slider
