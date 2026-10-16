@@ -87,6 +87,7 @@
             background:linear-gradient(to top, #2fb877 var(--p), #000b var(--p)); padding:6px; }
     .tile[hidden], .menuLabel[hidden] { display:none; }
     .tile.big { font-size:clamp(2.4rem, 12vmin, 5rem); line-height:1; }
+    .tile.end { opacity:.3; }   /* − or + at the end of its list: nothing to change */
     /* The setting's name and value sit between its − and + tiles, so each tile is just one big symbol. */
     .menuLabel { grid-column:2; align-self:center; text-align:center; font-size:clamp(1rem, 5vmin, 2.4rem); font-weight:800;
                  text-shadow:0 2px 8px #000; }
@@ -118,9 +119,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.24</small></h1>
+    <h1>Salsa Sync <small id="version">v2.25</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -357,7 +358,6 @@
     if (lastFrameAt) fps = 0.9 * fps + 0.1 * (1000 / (now - lastFrameAt));
     lastFrameAt = now;
     landmarker.detectForVideo(video, mpTs, result => onResult(result, captured));
-    updateCount(performance.now());
     scheduleNextFrame();
   }
 
@@ -744,15 +744,27 @@
   // "5", so the count-in's 5, 6, 7, 8 lines up with the song.
   //   fixedTempo songs (licence: no changes allowed) play as they are, at their own tempo.
   //   The others have one copy per tempo, sped up or slowed down with the pitch kept the same.
-  let songList = null;
-  const songCache = {};
+  //   Downloading: the files are fetched in the background as soon as the camera starts (prefetchSongs), so a sample
+  //   or session doesn't wait for a download. They're kept compressed (about 15 MB in all); only the song in use is
+  //   kept decoded, because a decoded 3-minute song takes about 70 MB of memory.
   const SONGS = ["cupido", "vamos", "mujer"];
   const isSong = id => SONGS.includes(id);
+  let songListReq = null, decoded = { file: null, buffer: null };
+  const songBytes = {};   // file name -> promise of its compressed bytes
+  const songList = () => songListReq ??= fetch("music/songs.json").then(r => r.json());
+  const fetchSong = file => songBytes[file] ??= fetch(file).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+                                                         .catch(err => { delete songBytes[file]; throw err; });   // try again next time
+  const songFile = (list, id, bpm) => list[id].fixedTempo ? list[id].files.any : list[id].files[bpm];
+  async function prefetchSongs() {
+    try { const list = await songList(); for (const id of SONGS) fetchSong(songFile(list, id, choice.bpm).file).catch(() => {}); } catch {}
+  }
   async function loadSong(id, bpm) {
-    songList ??= await (await fetch("music/songs.json")).json();
-    const song = songList[id], f = song.fixedTempo ? song.files.any : song.files[bpm];
-    songCache[f.file] ??= await audioCtx.decodeAudioData(await (await fetch(f.file)).arrayBuffer());
-    return { ...f, buffer: songCache[f.file], title: song.title };
+    const list = await songList(), f = songFile(list, id, bpm);
+    if (decoded.file !== f.file) {
+      const buffer = await audioCtx.decodeAudioData((await fetchSong(f.file)).slice(0));   // decode a copy: decoding uses up the bytes
+      decoded = { file: f.file, buffer };
+    }
+    return { ...f, buffer: decoded.buffer, title: list[id].title };
   }
   // ---------- Session choices: music, tempo, length ----------
   // music is "beat" (cowbell only), "band" (the built-in salsa band) or a song's id. Remembered on this device, so
@@ -791,7 +803,11 @@
   // menu whenever you change the music (4 s). Each sample gets its own output, so stopping it is one disconnect.
   // sample is the one playing (or loading); stopping clears it, so a song that finishes loading late doesn't play.
   let sample = null;
-  function stopSample() { if (sample) { sample.out?.disconnect(); if (sample.btn) sample.btn.textContent = "▶"; sample = null; } }
+  function stopSample() {
+    if (!sample) return;
+    sample.out?.disconnect(); sample.el?.pause(); if (sample.url) URL.revokeObjectURL(sample.url);
+    if (sample.btn) sample.btn.textContent = "▶"; sample = null;
+  }
   async function playSample(id, secs, btn = null) {
     stopSample();
     audioCtx ??= new AudioContext({ latencyHint: "interactive" }); await audioCtx.resume();
@@ -799,15 +815,17 @@
     if (btn) btn.textContent = "…";
     let t = audioCtx.currentTime + 0.05;
     if (isSong(id)) {
-      let song;
-      try { song = await loadSong(id, choice.bpm); }
+      // A song sample plays through a plain <audio> element: it starts within a moment because it decodes as it plays,
+      // instead of decoding the whole song first (about a second on a laptop, more on a phone). Exact timing doesn't
+      // matter for a sample. Sessions still decode the whole song, for exact beat timing.
+      let bytes, f;
+      try { const list = await songList(); f = songFile(list, id, choice.bpm); bytes = await fetchSong(f.file); }
       catch { if (sample === mine) stopSample(); statusEl.textContent = "Couldn't load the sample. Check your internet connection."; return; }
-      if (sample !== mine) return;   // stopped, or another sample picked, while it loaded
-      t = audioCtx.currentTime + 0.05; mine.out = newMaster();
-      const src = audioCtx.createBufferSource(), vol = audioCtx.createGain();
-      src.buffer = song.buffer; src.connect(vol).connect(mine.out);
-      vol.gain.setValueAtTime(0.5, t); vol.gain.setValueAtTime(0.5, t + secs - 1); vol.gain.linearRampToValueAtTime(0, t + secs);   // fade out
-      src.start(t, song.beats[0]); src.stop(t + secs);
+      if (sample !== mine) return;   // stopped, or another sample picked, while it downloaded
+      mine.url = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
+      const el = mine.el = new Audio(mine.url); el.volume = 0.6; el.currentTime = f.beats[0];
+      el.play().catch(() => {});
+      setTimeout(() => { if (sample === mine) el.volume = 0.25; }, (secs - 0.6) * 1000);   // soften just before it stops
     } else {   // Beat only or the salsa band: play the same notes a session would, through the sample's own output
       mine.out = newMaster();
       const beatSec = 60 / chosenBpm(), sessionOut = master; master = mine.out;
@@ -977,6 +995,10 @@
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
 
+  // The beat counter runs on its own screen-refresh loop (about 60 times a second), not on camera frames (12-20 a
+  // second, and pose tracking can hold one up), so the number changes as close to the beat as the screen allows.
+  // It's shifted by the audio delay, so it changes when you HEAR the beat, not when the device sends it.
+  (function countLoop() { updateCount(performance.now() - (session?.audioDelayMs ?? 0)); requestAnimationFrame(countLoop); })();
   function updateCount(now) {
     if (!session) { countEl.textContent = phaseEl.textContent = ""; return; }
     let current = null, i = -1;
@@ -1306,6 +1328,12 @@
     $("tLen").textContent = `${choice.dur} s`;
     $("tDelay").textContent = `${audioDelay} ms`;
     $("tSens").textContent = autoLift() ? "Auto" : `${Math.round(minLift * 100)}%`;
+    // Grey out a − or + that can't go any further. (Music has no ends: it goes round.)
+    const sens = autoLift() ? "auto" : Math.round(minLift * 100) / 100, fixed = !!SONG_BPM[choice.music];
+    const ends = { "tempo-": fixed || choice.bpm === BPMS[0], "tempo+": fixed || choice.bpm === BPMS.at(-1),
+      "length-": choice.dur === DURS[0], "length+": choice.dur === DURS.at(-1),
+      "delay-": audioDelay <= 0, "delay+": audioDelay >= 400, "sens-": sens === SENS[0], "sens+": sens === SENS.at(-1) };
+    document.querySelectorAll(".tile").forEach(t => t.classList.toggle("end", !!ends[t.dataset.act]));
   }
   function menuAction(act) {
     menuActiveAt = performance.now();
@@ -1314,7 +1342,8 @@
     if (act === "session") { showMenuPage("session"); speak("Pick the music, tempo and length."); }
     else if (act === "start") { stopSample(); closeMenu(); showPrompt("Starting…", "amber", { hideAfter: 1500 }); beginSession(); }
     else if (act.startsWith("music")) {   // step through the music and play a bit of it
-      choice.music = step(MUSICS, choice.music, act.endsWith("+") ? 1 : -1); saveChoice(); playSample(choice.music, 4);
+      const i = (MUSICS.indexOf(choice.music) + (act.endsWith("+") ? 1 : -1) + MUSICS.length) % MUSICS.length;   // goes round
+      choice.music = MUSICS[i]; saveChoice(); playSample(choice.music, 4);
     }
     else if (act.startsWith("delay")) setDelay(audioDelay + (act.endsWith("+") ? 20 : -20));
     else if (act.startsWith("sens")) {   // Auto, then a fixed lift from 2% to 6% of leg length
@@ -1335,7 +1364,7 @@
     else closeMenu();
     updateTiles();
   }
-  tiles.forEach(tile => tile.addEventListener("click", () => menuAction(tile.dataset.act)));   // tapping works too
+  tiles.forEach(tile => tile.addEventListener("click", () => { if (!tile.classList.contains("end")) menuAction(tile.dataset.act); }));   // tapping works too
 
   function menuFrame(lm) {
     // Where the wrists appear on screen: the video is scaled to fit the stage ("contain") and may be mirrored.
@@ -1349,7 +1378,7 @@
       const x = x0 + (mirror ? 1 - lm[i].x : lm[i].x) * vw * scale, y = y0 + lm[i].y * vh * scale;
       ring.hidden = false; ring.style.left = x + "px"; ring.style.top = y + "px";
       for (const tile of tiles) {
-        if (tile.hidden) continue;
+        if (tile.hidden || tile.classList.contains("end")) continue;
         const r = tile.getBoundingClientRect(), left = r.left - box.left, top = r.top - box.top;
         if (x >= left && x <= left + r.width && y >= top && y <= top + r.height) over = tile;
       }
@@ -1395,6 +1424,7 @@
       speak("Starting the camera.");
       if (!landmarker) await loadModel();
       await startCamera();
+      prefetchSongs();
       running = true; cameraBtn.textContent = "Stop camera"; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = false;
       cameraBtn.disabled = false;
       scheduleNextFrame();
