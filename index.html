@@ -117,9 +117,9 @@
 <main>
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <header>
-    <h1>Salsa Sync <small id="version">v2.27</small></h1>
+    <h1>Salsa Sync <small id="version">v2.28</small></h1>
     <details class="help"><summary>How it works</summary>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
          Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
@@ -656,7 +656,7 @@
   const EARLY_COLOUR = "#b48cff", LATE_COLOUR = "#e0a040";   // purple = early (rushing), amber = late (dragging)
   function drawSpread(s) {
     const c = $("spreadChart"), r = s.report;
-    c.hidden = r.onTimePct == null || !!r.unreliable;   // no chart when the steps couldn't be timed
+    c.hidden = !s.steps.length;   // shown even when Timing can't score you: the bars show how spread out the steps were
     if (c.hidden) return;
     const w = c.clientWidth, h = c.clientHeight, top = 18, base = h - 16;
     const g = sizeCanvas(c, w, h);
@@ -672,10 +672,13 @@
     g.strokeStyle = "#ffffff26"; g.lineWidth = 1;                           // a faint line every 100 ms
     for (let ms = -SPREAD_MS + 100; ms < SPREAD_MS; ms += 100) if (ms) { g.beginPath(); g.moveTo(x(ms), top); g.lineTo(x(ms), base); g.stroke(); }
     g.strokeStyle = "#999"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x(0), top); g.lineTo(x(0), base); g.stroke(); g.setLineDash([]);
+    // The percentages only when Timing could score you. With steps scattered across the whole beat, matching each to
+    // its nearest beat turns "very late" into "early for the next beat", so the numbers would mislead. The bars don't.
     g.font = "12px system-ui"; g.textBaseline = "top";
-    g.fillStyle = EARLY_COLOUR; g.textAlign = "left";  g.fillText(`Early ${r.earlyPct}%`, 4, 2);
-    g.fillStyle = LATE_COLOUR;  g.textAlign = "right"; g.fillText(`Late ${r.latePct}%`, w - 4, 2);
-    g.fillStyle = "#3ecf8e"; g.textAlign = "center"; g.fillText(`On the beat ${r.onTimePct}%`, x(0), 2);
+    const pct = v => r.unreliable || v == null ? "" : ` ${v}%`;
+    g.fillStyle = EARLY_COLOUR; g.textAlign = "left";  g.fillText(`Early${pct(r.earlyPct)}`, 4, 2);
+    g.fillStyle = LATE_COLOUR;  g.textAlign = "right"; g.fillText(`Late${pct(r.latePct)}`, w - 4, 2);
+    g.fillStyle = "#3ecf8e"; g.textAlign = "center"; g.fillText(`On the beat${pct(r.onTimePct)}`, x(0), 2);
     g.fillStyle = "#a0a0a0"; g.textBaseline = "bottom"; g.font = "11px system-ui";
     g.textAlign = "center";                                                 // labels in ms: -200 ... beat ... +200
     for (let ms = -SPREAD_MS + 100; ms < SPREAD_MS; ms += 100) g.fillText(ms ? (ms > 0 ? "+" : "−") + Math.abs(ms) : "beat", x(ms), h);
@@ -1330,7 +1333,7 @@
   // ---------- Air buttons: a menu you work by holding a hand over a button ----------
   // Raising both hands (when nothing is running) opens it. Your wrists are drawn as yellow rings; hold one over a
   // button for 1.5 s and it fills up green and fires. Move off and back on to press the same button again,
-  // except plus and minus, which keep going up or down once a second while your hand stays there.
+  // except the music, tempo and length − and +, which keep going once a second while your hand stays there.
   // Two pages, so it isn't crowded: the main page (session, step check, settings, close) and a settings page
   // (tempo, length, audio sync, back).
   const DWELL_MS = 1500, REPEAT_MS = 1000, MENU_TIMEOUT_MS = 20000;
@@ -1377,12 +1380,13 @@
       const i = (MUSICS.indexOf(choice.music) + (act.endsWith("+") ? 1 : -1) + MUSICS.length) % MUSICS.length;   // goes round
       choice.music = MUSICS[i]; saveChoice(); playSample(choice.music, 4);
     }
-    else if (act.startsWith("delay")) setDelay(audioDelay + (act.endsWith("+") ? 20 : -20));
+    else if (act.startsWith("delay")) { setDelay(audioDelay + (act.endsWith("+") ? 20 : -20)); speak(`Delay ${audioDelay} milliseconds`); }
     else if (act.startsWith("sens")) {   // Auto, then a fixed lift from 2% to 6% of leg length
       const now = autoLift() ? "auto" : Math.round(minLift * 100) / 100;
       const next = step(SENS, SENS.includes(now) ? now : 0.04, act.endsWith("+") ? 1 : -1);
       setAutoLift(next === "auto");
       if (next !== "auto") { minLift = next; $("lift").value = next; showLift(); try { localStorage.setItem("minLift", next); } catch {} }
+      speak(next === "auto" ? "Lift needed: auto" : `Lift needed ${Math.round(next * 100)} percent`);
     }
     else if (act === "check") { closeMenu(); startCheck(); }
     else if (act.startsWith("tempo")) {
@@ -1423,7 +1427,9 @@
     }
     if (over) {
       menuActiveAt = now;
-      const repeats = /[+-]$/.test(over.dataset.act);
+      // Tempo, length and music keep going while your hand stays. Delay and lift needed don't: a resting hand
+      // there once crept the delay up unnoticed. Move off and back on for another step.
+      const repeats = /^(tempo|length|music)[+-]$/.test(over.dataset.act);
       if (!hover.fired || repeats) {
         const progress = Math.min(1, (now - hover.since) / (hover.fired ? REPEAT_MS : DWELL_MS));
         over.style.setProperty("--p", `${progress * 100}%`);
