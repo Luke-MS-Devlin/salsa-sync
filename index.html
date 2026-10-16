@@ -725,18 +725,19 @@
     return { T, bpm, band, yourBpm, yoursMs, musicMs, tiles, score, tip: nextTip(T, tiles, bpm, yourBpm, s.bpm) };
   }
 
-  // One tip: the first tile that isn't good, in tile order.
+  // One tip: the first tile that isn't good, in tile order, except Right beat comes before On the beat: when you're a
+  // count out, "your step on 4 lands late" names a count you shouldn't be stepping on anyway.
   function nextTip(T, tiles, bpm, yourBpm, exactBpm) {
     if (tiles.t && !tiles.t.good) return [yourBpm > bpm ? "Slow down to the music" : "Speed up to the music", `You danced at about ${yourBpm} BPM; the music is ${bpm}.`];
     if (!T) return ["Dance the 6-step basic", "Most of your basics didn't have 6 steps that I could see. Keep your whole body in view and dance the basic until the music stops."];
     if (T.pause < 1.75) return ["Hold the pause for two full beats", "You step into the next half early. Freeze on 4 and 8."];
     if (T.pause > 2.25) return ["Don't wait too long", "Step again right on 1 and 5."];
+    if (T.shift > 0) return ["Start on the 1", `Your steps land ${T.shift === 1 ? "one count" : T.shift + " counts"} late. Step right on "Go!".`];
+    if (T.shift < 0) return ["Wait for the 1", "You step in before the 1. Let the count land, then step."];
     if (T.on < 6) {
       const k = T.onShare.indexOf(Math.min(...T.onShare)), near = Math.round(T.dots[k]);
       return [`Your step on ${((near % 8) + 8) % 8 + 1} lands ${T.dots[k] > near ? "late" : "early"}`, "Listen for the cowbell and land with it."];
     }
-    if (T.shift > 0) return ["Start on the 1", `Your steps land ${T.shift === 1 ? "one count" : T.shift + " counts"} late. Step right on "Go!".`];
-    if (T.shift < 0) return ["Wait for the 1", "You step in before the 1. Let the count land, then step."];
     return ["Clean!", exactBpm < 200 ? `Try ${bpm + 10} BPM next.` : "That's the top tempo. Try a song next."];
   }
 
