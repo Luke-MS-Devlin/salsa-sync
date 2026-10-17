@@ -9,17 +9,22 @@
     * { box-sizing: border-box; }
     body { margin:0; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     details > summary { cursor:pointer; color:var(--muted); font-size:.9rem; }
-    /* Two screens. Phone: side by side in a row you swipe through, each one screen wide (scroll snap does the swiping).
+    /* Two screens. Phone: side by side in a row, each one screen wide. The browser doesn't scroll the row itself
+       (overflow-x hidden, touch-action pan-y); the JS turns sideways swipes into "next/previous tab" or "camera".
        Laptop (media query at the end): the camera on the left, the menus in a column on the right. */
-    .screens { display:flex; height:100vh; height:100svh; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
+    .screens { display:flex; height:100vh; height:100svh; overflow-x:hidden; overflow-y:hidden; touch-action:pan-y;
                scrollbar-width:none; overscroll-behavior-x:contain; }
     .screens::-webkit-scrollbar { display:none; }
-    .screen { flex:0 0 100%; height:100%; scroll-snap-align:start; scroll-snap-stop:always; }
-    .handScreen { overflow-y:auto; padding:0 16px 40px; }
+    .screen { flex:0 0 100%; height:100%; }
+    .handScreen { overflow-y:auto; padding:0 16px 40px; touch-action:pan-y; }
     .handScreen > .tab { max-width:520px; margin:0 auto; }
     .tabs { position:sticky; top:0; z-index:5; display:flex; gap:6px; padding:12px 0; background:var(--bg); max-width:520px; margin:0 auto; }
     .tabs button { flex:1; padding:9px 4px; border-radius:999px; font-size:.9rem; }
     .tabs button[aria-selected="true"] { background:var(--fg); color:var(--bg); border-color:var(--fg); font-weight:700; }
+    .tabs .camTab { flex:0 0 38px; height:38px; padding:0; border-radius:50%; display:grid; place-items:center; }   /* phone only */
+    .tab.fromRight { animation:fromRight .18s ease-out; } .tab.fromLeft { animation:fromLeft .18s ease-out; }
+    @keyframes fromRight { from { transform:translateX(30px); opacity:.3; } }
+    @keyframes fromLeft  { from { transform:translateX(-30px); opacity:.3; } }
     .tab[hidden] { display:none; }
     .panel h3 { margin:14px 0 2px; font-size:1rem; }
     .panel h3 small { font-weight:400; opacity:.7; }
@@ -59,7 +64,7 @@
     /* Session setup: big tap targets. A row of choices where one is picked (styled radio buttons). */
     .seg { display:flex; gap:6px; flex-wrap:wrap; }
     .seg[hidden] { display:none; }
-    .seg label { flex:1; min-width:60px; }
+    .seg label { flex:1; min-width:60px; position:relative; }   /* keeps the hidden radio inside its label */
     .seg input { position:absolute; opacity:0; }
     .seg span { display:block; text-align:center; padding:10px 8px; border:1px solid #444; border-radius:10px; color:var(--fg); }
     .seg input:checked + span { background:var(--ok); border-color:var(--ok); color:#03140b; font-weight:700; }
@@ -178,9 +183,9 @@
     #fullAnalysis[open] > summary { margin-bottom:12px; }
     /* Laptop (wide and landscape): both screens at once, camera on the left, menus on the right. Last, so it wins. */
     @media (min-width: 900px) and (orientation: landscape) {
-      .screens { display:grid; grid-template-columns:minmax(0, 1fr) 400px; overflow:hidden; scroll-snap-type:none; }
+      .screens { display:grid; grid-template-columns:minmax(0, 1fr) 400px; overflow:hidden; }
       .camScreen { padding:10px 0 10px 10px; } .camScreen .stage { border-radius:12px; }
-      .toHand { display:none; }
+      .toHand, .tabs .camTab { display:none; }
     }
   </style>
 </head>
@@ -190,10 +195,10 @@
 <main id="screens" class="screens">
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.37 See full analysis stays visible, with a note when an older session has none saved · 2.36 Results shows only the newest session; History opens a session in place, full analysis included (kept for the newest 30) · 2.35 Results heading reads "Last Session:" and the date · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.41 on a phone the switch-camera button flips between front and back (main lens each side) · 2.40 swiping left from full screen leaves full screen and opens Results · 2.39 Start session and Step check buttons removed (sessions start from the hands-up menu), taps right after a swipe ignored · 2.38 phone: round camera button left of the tabs, swipe left and right through Camera, Results, History, Settings, Help · 2.37 See full analysis stays visible, with a note when an older session has none saved · 2.36 Results shows only the newest session; History opens a session in place, full analysis included (kept for the newest 30) · 2.35 Results heading reads "Last Session:" and the date · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <section class="screen camScreen" id="camScreen" aria-label="Camera">
     <div class="stage">
-      <div class="camTop"><h1>Salsa Sync <small id="version">v2.37</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
+      <div class="camTop"><h1>Salsa Sync <small id="version">v2.41</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
 
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
@@ -246,6 +251,7 @@
 
   <section class="screen handScreen" id="handScreen" aria-label="Menus">
     <nav class="tabs" role="tablist">
+      <button id="camTab" class="camTab" aria-label="Back to the camera"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h3.5l2-3h7l2 3H21v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
       <button role="tab" data-tab="results" aria-selected="true">Results</button>
       <button role="tab" data-tab="history">History</button>
       <button role="tab" data-tab="settings">Settings</button>
@@ -253,7 +259,7 @@
     </nav>
 
     <div class="tab" id="tab-results">
-      <p id="noResults">No sessions yet. Turn the camera on, then raise both hands and pick Start (or use Start session in Settings).</p>
+      <p id="noResults">No sessions yet. Turn the camera on, then raise both hands and pick Start.</p>
       <section id="results" hidden>
         <h2 id="resTitle">Last Session</h2>
         <!-- Summary: tap the score or a tile to see it on your typical basic; tap it again to go back. -->
@@ -303,7 +309,7 @@
 
     <div class="tab" id="tab-settings" hidden>
       <h2>Session</h2>
-      <p class="legend">Start session here and Start on the hands-up menu use these.</p>
+      <p class="legend">Start on the hands-up menu uses these.</p>
       <div id="setupDlg" class="panel">
         <h3>Music</h3>
         <div class="seg">
@@ -331,10 +337,6 @@
           <label><input type="radio" name="dur" value="30"><span>30 s</span></label>
           <label><input type="radio" name="dur" value="60"><span>60 s</span></label>
         </div>
-      </div>
-      <div class="controls" style="margin-top:12px">
-        <button id="sessionBtn" class="primary" disabled>▶ Start session</button>
-        <button id="checkBtn" disabled>👣 Step check</button>
       </div>
       <h2>Settings</h2>
       <div id="settingsDlg" class="panel">
@@ -371,9 +373,9 @@
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame, the room well lit and the volume up.
          Tap the camera button once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
          then hold a hand over a button until it fills up. Raising both hands during a session or step check stops it.</p>
-      <p>The button at the bottom of the camera screen turns the camera on and off; with more than one camera, the button beside it switches between them.
-         You can also start a session from Settings, with the music, tempo and length chosen there.
-         On a phone, swipe left from the camera for these menus and swipe right to go back.</p>
+      <p>The button at the bottom of the camera screen turns the camera on and off; with more than one camera, the button beside it switches between them (front and back on a phone).
+         Sessions start from the hands-up menu; the music, tempo and length can also be chosen in Settings.
+         On a phone, swipe left and right to move between the camera, Results, History, Settings and Help, or tap the round camera button to go straight back.</p>
       <p>The first session after you turn the camera on starts with a body check: stand still for a few seconds
          so the app learns how much your feet wobble when they're not moving. Redo it (in Settings) if you move the camera.
          A session then shows a big 3, 2, 1, counts you in with "5, 6, 7, 8" blips and you dance two practice basics, starting on the green 1.
@@ -428,7 +430,7 @@
   const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
   const live = $("live"), lctx = live.getContext("2d");
   const statusEl = $("status"), countEl = $("count"), phaseEl = $("phase");
-  const cameraBtn = $("cameraBtn"), sessionBtn = $("sessionBtn"), checkBtn = $("checkBtn");
+  const cameraBtn = $("cameraBtn");
   const draw = new DrawingUtils(ctx);
 
   let landmarker = null, stream = null, running = false;
@@ -453,11 +455,13 @@
 
   // Which camera: the first time, the back camera if there is one (better picture), otherwise the only one (a laptop
   // webcam). After that, the switch button steps through every camera found.
-  let cameras = [], cameraId = null;
+  // Which camera: on a phone, by side (facing "environment" = back, "user" = front), and the phone picks its main lens
+  // on that side. On a laptop or desktop (cameras that don't say which way they face), by device id.
+  let cameras = [], cameraId = null, facing = "environment";
   async function startCamera() {
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { ...(cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" }), width: { ideal: 640 }, height: { ideal: 480 } }, audio: false,
+      video: { ...(cameraId ? { deviceId: { exact: cameraId } } : { facingMode: facing }), width: { ideal: 640 }, height: { ideal: 480 } }, audio: false,
     });
     video.srcObject = stream;
     await video.play();
@@ -465,7 +469,8 @@
     // Camera names and ids are only available after permission is granted, so we list them here.
     cameras = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
     const settings = stream.getVideoTracks()[0].getSettings();
-    cameraId = settings.deviceId ?? null;
+    if (settings.facingMode) { facing = settings.facingMode; cameraId = null; }   // a phone: remember the side, not the lens
+    else cameraId = settings.deviceId ?? null;
     $("switchCam").hidden = cameras.length < 2;
     // Mirror anything that isn't a back camera, so it feels like a mirror. (Laptop webcams usually don't say which way they face.)
     const mirror = settings.facingMode !== "environment";
@@ -868,17 +873,46 @@
   // Phone: the camera screen and the menus screen sit side by side and you swipe between them. Anything that needs the
   // camera in view (a session, the hands-up menu, a step check, audio sync) scrolls back to it. On a laptop both show at
   // once, so scrolling does nothing.
-  const screens = $("screens");
-  const goCam = () => screens.scrollTo({ left: 0, behavior: "smooth" });
+  // On a phone the order is Camera, Results, History, Settings, Help: swipe left and right through them, or tap the round
+  // camera button at the left of the tabs. Coming back from the camera always lands on Results.
+  const screens = $("screens"), TABS = ["results", "history", "settings", "help"];
+  let tabNow = "results";
+  const onPhone = () => !matchMedia("(min-width: 900px) and (orientation: landscape)").matches;
+  function goCam() { screens.scrollTo({ left: 0, behavior: "smooth" }); if (onPhone() && tabNow !== "results") setTimeout(() => showTab("results"), 400); }
   function goHand(tab) { if (tab) showTab(tab); screens.scrollTo({ left: screens.scrollWidth, behavior: "smooth" }); }
-  function showTab(name) {
+  function showTab(name, from) {
+    tabNow = name;
+    const t = $("tab-" + name); t.classList.remove("fromRight", "fromLeft");
+    if (from) { void t.offsetWidth; t.classList.add(from === "right" ? "fromRight" : "fromLeft"); }   // restart the slide
     document.querySelectorAll(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
     document.querySelectorAll(".handScreen > .tab").forEach(t => t.hidden = t.id !== "tab-" + name);
     if (name === "results") showLatest();
     if (name === "history") closePast();
   }
-  document.querySelectorAll(".tabs [data-tab]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  document.querySelectorAll(".tabs [data-tab]").forEach(b => b.addEventListener("click", () =>
+    showTab(b.dataset.tab, TABS.indexOf(b.dataset.tab) > TABS.indexOf(tabNow) ? "right" : "left")));
   $("toHand").addEventListener("click", () => goHand());
+  $("camTab").addEventListener("click", goCam);
+  // A sideways swipe. On the menus screen: left = next tab, right = previous tab (or the camera, from Results).
+  // On the camera screen: left = Results. The chart that scrolls sideways in the full analysis keeps its own swipes.
+  let swipe = null, swipedAt = -1e9;
+  // Some phones still send a tap where a swipe ends. That tap would land on the new tab (Audio sync, say), so
+  // ignore taps for half a second after a swipe.
+  document.addEventListener("click", e => { if (performance.now() - swipedAt < 500) { e.stopPropagation(); e.preventDefault(); } }, true);
+  $("screens").addEventListener("touchstart", e => {
+    swipe = e.target.closest(".scroll") || e.touches.length > 1 ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+  $("screens").addEventListener("touchend", e => {
+    if (!swipe || !onPhone()) return;
+    const dx = e.changedTouches[0].clientX - swipe.x, dy = e.changedTouches[0].clientY - swipe.y; swipe = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < 1.5 * Math.abs(dy)) return;   // too short, or mostly up and down
+    swipedAt = performance.now();
+    if (!e.target.closest("#handScreen")) { if (dx < 0) { if (isFull()) { setFull(false); setTimeout(() => goHand("results"), 100); } else goHand("results"); } return; }
+    const i = TABS.indexOf(tabNow);
+    if (dx < 0 && i < TABS.length - 1) showTab(TABS[i + 1], "right");
+    else if (dx > 0 && i > 0) showTab(TABS[i - 1], "left");
+    else if (dx > 0 && i === 0) goCam();
+  }, { passive: true });
 
   // ---------- History ----------
   // Each session is kept on this device, newest first, up to 100: its summary (about 1 KB) and, for the newest 30,
@@ -1369,7 +1403,6 @@
     const pump = () => { while (next < queue.length && queue[next].t < audioCtx.currentTime + 2) queue[next++].play(); };
     pump(); pumpTimer = setInterval(pump, 250);
 
-    sessionBtn.disabled = true; sessionBtn.textContent = "Recording…"; checkBtn.disabled = true;
     // Map beat times onto the camera clock once audio is flowing.
     await new Promise(r => setTimeout(r, 1000));
     const beats = audioBeats.map(b => ({ t: round(audioToPerf(b.audio), 1), count: b.count, countIn: b.countIn, practice: b.practice, cue: b.cue, startHere: b.startHere }));
@@ -1389,7 +1422,6 @@
     statusEl.textContent = sync ? `Audio sync: after the countdown, march on the spot, one step on every click (${SYNC_BEATS} clicks)`
       : `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${Math.round(bpm)} BPM)`;
     speak(sync ? "March on the spot, one step on every click." : "Get ready.");
-    sessionBtn.disabled = false; sessionBtn.textContent = "Stop session";
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
 
@@ -1433,7 +1465,7 @@
     clearTimeout(endTimer); clearInterval(pumpTimer);
     if (performance.now() < session.startPerf) {   // stopped before the real part began: nothing to keep
       session = null; master.disconnect(); wakeLock?.release?.(); wakeLock = null; showPrompt("Cancelled", "", { hideAfter: 2000 });
-      sessionBtn.textContent = "Start session"; checkBtn.disabled = false; statusEl.textContent = "Session cancelled.";
+      statusEl.textContent = "Session cancelled.";
       return;
     }
     session.endPerf = Math.min(session.endPerf, performance.now());
@@ -1448,7 +1480,6 @@
     master.disconnect();
     wakeLock?.release?.(); wakeLock = null;
     countEl.textContent = phaseEl.textContent = "";
-    sessionBtn.disabled = false; sessionBtn.textContent = "Start session"; checkBtn.disabled = false;
     if (s.sync) {   // audio sync march done: set the delay (unless you stopped it)
       if (s.stoppedEarly) { showPrompt("Stopped", "", { hideAfter: 2000 }); statusEl.textContent = "Audio sync stopped."; return; }
       finishSync(s); statusEl.textContent = $("syncNote").textContent; return;
@@ -1490,7 +1521,7 @@
     video.srcObject = null;
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     liveHistory.length = 0;
-    showCameraOn(false); sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = true;
+    showCameraOn(false); $("syncBtn").disabled = $("bodyBtn").disabled = true;
     showPrompt(null); closeMenu();
   }
 
@@ -1526,8 +1557,6 @@
     else $("calibNote").textContent = "";
     checking = true; feetWereLost = false;
     $("feet").hidden = !!forSession; updateFeet();
-    if (forSession) { sessionBtn.textContent = "Cancel"; checkBtn.disabled = true; }
-    else { checkBtn.textContent = "Stop step check"; sessionBtn.disabled = true; }
     $("liveLegend").innerHTML = `Live lift off the floor (last 5 s): <b class="l">left</b> and <b class="r">right</b>.
       The dashed line is the lift needed to count as a step. Each landing flashes L or R and beeps.`;
   }
@@ -1538,8 +1567,6 @@
     const n = feet.left.count + feet.right.count;
     if (!quiet) showPrompt("Stopped", "", { sub: `L ${feet.left.count} · R ${feet.right.count}`, say: `Stopped. ${n} steps.`, important: true, hideAfter: 4000 });
     $("feet").hidden = true;
-    checkBtn.textContent = "Step check"; checkBtn.disabled = !running;
-    sessionBtn.textContent = "Start session"; sessionBtn.disabled = !running;
     $("liveLegend").innerHTML = `Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.`;
   }
 
@@ -1646,7 +1673,6 @@
     try { localStorage.setItem("minLift", minLift); } catch {}
   });
   try { if (!autoLift() && localStorage.getItem("minLift")) { minLift = Number(localStorage.getItem("minLift")); $("lift").value = minLift; showLift(); } } catch {}
-  checkBtn.addEventListener("click", () => { if (checking) stopCheck(); else { goCam(); startCheck(); } });
 
   // ---------- Big prompts and voice (so you can follow along from 3-4 m away) ----------
   // showPrompt is called every frame, so it only does something when the message changes.
@@ -1823,15 +1849,16 @@
   }
 
   // Full screen: the video fills the phone or laptop screen. Also hides the browser bars where that's allowed.
-  $("fullBtn").addEventListener("click", () => {
-    const full = !$("video").parentElement.classList.contains("full");
+  const isFull = () => $("video").parentElement.classList.contains("full");
+  function setFull(full) {
     $("video").parentElement.classList.toggle("full", full);
     $("fullBtn").textContent = full ? "✕ Exit full screen" : "⛶ Full screen";
     if (full) document.documentElement.requestFullscreen?.().catch(() => {});
     else if (document.fullscreenElement) document.exitFullscreen();
-  });
-  document.addEventListener("fullscreenchange", () => {   // pressing Esc leaves full screen too
-    if (!document.fullscreenElement && $("video").parentElement.classList.contains("full")) $("fullBtn").click();
+  }
+  $("fullBtn").addEventListener("click", () => setFull(!isFull()));
+  document.addEventListener("fullscreenchange", () => {   // pressing Esc (or Back on a phone) leaves full screen too
+    if (!document.fullscreenElement && isFull()) setFull(false);
   });
 
   // ---------- Buttons ----------
@@ -1846,7 +1873,7 @@
       if (!landmarker) await loadModel();
       await startCamera();
       prefetchSongs();
-      running = true; showCameraOn(true); sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = false;
+      running = true; showCameraOn(true); $("syncBtn").disabled = $("bodyBtn").disabled = false;
       cameraBtn.disabled = false;
       scheduleNextFrame();
     } catch (err) {
@@ -1865,18 +1892,16 @@
   // Switch camera: the next one in the list (front and back on a phone, any others on a laptop). Not during a session.
   $("switchCam").addEventListener("click", async () => {
     if (!running || session || checking || cameras.length < 2) return;
-    const i = cameras.findIndex(c => c.deviceId === cameraId);
-    cameraId = cameras[(i + 1) % cameras.length].deviceId;
+    if (!cameraId) facing = facing === "user" ? "environment" : "user";   // phone: front <-> back
+    else { const i = cameras.findIndex(c => c.deviceId === cameraId); cameraId = cameras[(i + 1) % cameras.length].deviceId; }
     try { await startCamera(); liveHistory.length = 0; bodyChecked = false; } catch (err) { statusEl.textContent = "Camera error: " + err.message; }
   });
 
 
-  // Start session: body check (stand still), then the music. With Auto sensitivity off, straight to the music.
-  // Pressing it again cancels.
+  // A session: body check (stand still), then the music. With Auto sensitivity off, straight to the music.
   function runSession(mode, getReadySec) {
     startSession(mode, getReadySec).catch(err => {
       statusEl.textContent = "Session error: " + err.message; session = null; starting = false;
-      sessionBtn.disabled = false; sessionBtn.textContent = "Start session";
     });
   }
   function cancelCalibration() { stopCheck({ quiet: true }); showPrompt("Cancelled", "", { hideAfter: 2000 }); }
@@ -1887,11 +1912,6 @@
     goCam(); setAutoLift(true); startCheck("body");
   }
   $("bodyBtn").addEventListener("click", redoBodyCheck);
-  sessionBtn.addEventListener("click", () => {
-    if (session) stopSession();
-    else if (checking && calib.forSession) cancelCalibration();
-    else { stopSample(); goCam(); beginSession(); }
-  });
 </script>
 </body>
 </html>
