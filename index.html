@@ -46,6 +46,11 @@
               border-radius:12px 0 0 12px; background:#000a; border-color:#555; border-right:0; font-weight:700; }
     .camScreen .fullBtn { right:10px; left:auto; top:12px; bottom:auto; }
     .history { display:flex; flex-direction:column; gap:8px; }
+    .history h3 { margin:12px 0 0; font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+    .trend { width:100%; height:auto; display:block; margin:4px 0 8px; }
+    .trend line { stroke:#2c2f35; } .trend text { fill:var(--muted); font-size:10px; } .trend polyline { fill:none; stroke:#6b7079; stroke-width:1.5; }
+    .trend circle.ok { fill:#2fb877; } .trend circle.warn { fill:#f0b429; } .trend circle.bad { fill:#e5484d; }
+    .more { width:100%; margin-top:10px; }
     .hrow { display:flex; gap:12px; align-items:center; text-align:left; width:100%; background:var(--panel); border:1px solid #2c2f35; border-radius:12px; padding:10px 12px; }
     .hrow b { font-size:1.4rem; min-width:40px; } .hrow b.ok { color:#2fb877; } .hrow b.warn { color:#f0b429; } .hrow b.bad { color:#e5484d; }
     .hrow span { flex:1; font-size:.85rem; color:var(--muted); line-height:1.35; } .hrow span strong { color:var(--fg); }
@@ -184,10 +189,10 @@
 <main id="screens" class="screens">
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <section class="screen camScreen" id="camScreen" aria-label="Camera">
     <div class="stage">
-      <div class="camTop"><h1>Salsa Sync <small id="version">v2.33</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
+      <div class="camTop"><h1>Salsa Sync <small id="version">v2.34</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
 
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
@@ -241,16 +246,16 @@
   <section class="screen handScreen" id="handScreen" aria-label="Menus">
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="results" aria-selected="true">Results</button>
+      <button role="tab" data-tab="history">History</button>
       <button role="tab" data-tab="settings">Settings</button>
       <button role="tab" data-tab="help">Help</button>
-      <button role="tab" data-tab="about">About</button>
     </nav>
 
     <div class="tab" id="tab-results">
       <p id="noResults">No sessions yet. Turn the camera on, then raise both hands and pick Start (or use Start session in Settings).</p>
       <section id="results" hidden>
         <h2 id="resTitle">Last session</h2>
-        <p id="pastNote" hidden>Viewing a past session. <button id="backLatest">Back to latest</button></p>
+        <p id="pastNote" hidden>Viewing a past session from History. <button id="backLatest">Back to latest</button></p>
         <!-- Summary: tap the score or a tile to see it on your typical basic; tap it again to go back. -->
         <div class="sum">
           <div class="card pick" data-f="score" role="button" tabindex="0">
@@ -279,9 +284,15 @@
         </details>
         <div class="controls" style="margin-top:10px"><button id="downloadBtn">Download session data (JSON)</button></div>
       </section>
+    </div>
+
+    <div class="tab" id="tab-history" hidden>
+      <p id="noHistory">No sessions yet. Each session you finish is saved here, on this device.</p>
       <section id="historyBox" hidden>
-        <h2>History</h2>
+        <p id="histStats" class="legend"></p>
+        <svg id="trend" class="trend" viewBox="0 0 320 130" role="img" aria-label="Your score for each session, oldest on the left"></svg>
         <div id="history" class="history"></div>
+        <button id="moreHistory" class="more" hidden>Show more</button>
       </section>
     </div>
 
@@ -363,13 +374,11 @@
          A session then shows a big 3, 2, 1, counts you in with "5, 6, 7, 8" blips and you dance two practice basics, starting on the green 1.
          A second, higher "5, 6, 7, 8" means the real thing starts on the next 1, and that part is recorded.</p>
       <p>At the end the camera screen shows your score and one tip. The Results tab has the details: four scores (Tempo, Pause length,
-         Timing, On the beat), your typical basic, which you can tap to see each score on it, and your past sessions.</p>
+         Timing, On the beat), your typical basic, which you can tap to see each score on it. The History tab has every session you've done on this device,
+         with a chart of your score over time; tap one to see its results again.</p>
       <p>Bluetooth headphones and speakers play the music late, which makes every step look late. Run Audio sync in Settings
          (or from the hands-up menu) once for each pair: march on the spot to 16 clicks and it measures the delay.
          Dim light makes the camera slow down and miss steps, so turn the main light on. Filming from slightly to one side helps when your feet cross.</p>
-    </div>
-
-    <div class="tab" id="tab-about" hidden>
       <h2>Salsa basics</h2>
       <p>Salsa grew out of Cuban son and other Afro-Caribbean music, and took its name in New York in the 1960s and 70s.
          The music counts in eights: 1 2 3 4 5 6 7 8.</p>
@@ -877,15 +886,46 @@
     try { localStorage.setItem("history", JSON.stringify(history)); } catch {}
   }
   const when = at => new Date(at).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  function showHistory(current = 0) {
-    $("historyBox").hidden = !history.length;
+  // Shown 10 at a time (Show more adds 10), grouped by day, under a chart of the score for every session.
+  let histShown = 10, histCurrent = -1;
+  const dayKey = at => new Date(at).toDateString();
+  function dayName(at) {
+    const today = new Date(), yest = new Date(Date.now() - 864e5);
+    if (dayKey(at) === today.toDateString()) return "Today";
+    if (dayKey(at) === yest.toDateString()) return "Yesterday";
+    return new Date(at).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  }
+  function showHistory(current = histCurrent) {
+    histCurrent = current;
+    $("historyBox").hidden = !history.length; $("noHistory").hidden = !!history.length;
     $("noResults").hidden = !!history.length || !!lastSession;
-    $("history").innerHTML = history.map((h, i) => {
+    const scored = history.filter(h => h.summary.score != null);
+    $("histStats").textContent = `${history.length} session${history.length === 1 ? "" : "s"}` +
+      (scored.length ? ` · best ${Math.max(...scored.map(h => h.summary.score))}` : "");
+    drawTrend(scored.slice().reverse());
+    let html = "", lastDay = "";
+    history.slice(0, histShown).forEach((h, i) => {
+      if (dayKey(h.at) !== lastDay) { lastDay = dayKey(h.at); html += `<h3>${dayName(h.at)}</h3>`; }
       const sc = h.summary.score;
-      return `<button class="hrow" data-i="${i}" aria-current="${i === current}"><b class="${sc == null ? "" : tier(sc / 100)}">${sc ?? "–"}</b>` +
-        `<span><strong>${when(h.at)}</strong><br>${h.label}<br>${h.summary.tip[0]}</span></button>`;
-    }).join("");
-    document.querySelectorAll("#history .hrow").forEach(el => el.addEventListener("click", () => viewPast(+el.dataset.i)));
+      const time = new Date(h.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      html += `<button class="hrow" data-i="${i}" aria-current="${i === current}"><b class="${sc == null ? "" : tier(sc / 100)}">${sc ?? "–"}</b>` +
+        `<span><strong>${time}</strong> · ${h.label}<br>${h.summary.tip[0]}</span></button>`;
+    });
+    $("history").innerHTML = html;
+    $("moreHistory").hidden = history.length <= histShown;
+    document.querySelectorAll("#history .hrow").forEach(el => el.addEventListener("click", () => { showTab("results"); viewPast(+el.dataset.i); }));
+  }
+  $("moreHistory").addEventListener("click", () => { histShown += 10; showHistory(); });
+  // One dot per scored session, oldest on the left, evenly spaced; coloured like the score. Hidden with fewer than 2.
+  function drawTrend(list) {
+    const svg = $("trend"); svg.style.display = list.length < 2 ? "none" : "";
+    if (list.length < 2) return;
+    const x = i => 24 + i * (288 / (list.length - 1)), y = sc => 115 - sc;
+    let out = [0, 50, 100].map(v => `<line x1="24" x2="312" y1="${y(v)}" y2="${y(v)}"/><text x="0" y="${y(v) + 3}">${v}</text>`).join("");
+    out += `<polyline points="${list.map((h, i) => `${x(i)},${y(h.summary.score)}`).join(" ")}"/>`;
+    out += list.map((h, i) => `<circle cx="${x(i)}" cy="${y(h.summary.score)}" r="${list.length > 40 ? 2.5 : 4}" class="${tier(h.summary.score / 100)}"/>`).join("");
+    out += `<text x="24" y="129">oldest</text><text x="312" y="129" text-anchor="end">latest</text>`;
+    svg.innerHTML = out;
   }
   // A past session: its summary in the same cards. The full analysis needs the recording, which only the latest has.
   function viewPast(i, scroll = true) {
@@ -895,7 +935,7 @@
     $("resTitle").textContent = latest ? "Last session" : when(history[i].at);
     $("pastNote").hidden = latest; $("fullAnalysis").hidden = $("downloadBtn").hidden = !latest;
     showHistory(i);
-    if (scroll) $("handScreen").scrollTo({ top: $("results").offsetTop - 60, behavior: "smooth" });
+    if (scroll) $("handScreen").scrollTo({ top: 0, behavior: "smooth" });
   }
   $("backLatest").addEventListener("click", () => viewPast(0));
   if (history.length) {   // after a reload: the newest saved session, without its full analysis
