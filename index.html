@@ -26,23 +26,25 @@
     .panel p { margin:2px 0 6px; }
     .panel .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .dev { margin-top:24px; }
-    /* Camera screen: title and status top left, record button bottom centre, "Menu ›" on the right edge (phone only). */
+    /* Camera screen: title and status top left, camera button (and switch-camera button) bottom centre, "Menu ›" on the right edge (phone only). */
     .camTop { position:absolute; top:8px; left:12px; z-index:3; text-shadow:0 1px 4px #000; max-width:60%; pointer-events:none; }
     .camTop #status { font-size:.8rem; color:#ddd; }
-    .startCam { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:4; padding:16px 26px; font-size:1.2rem; font-weight:700;
-                background:var(--right); border-color:var(--right); color:#fff; border-radius:999px; }
-    .startCam[hidden] { display:none; }
-    .startCam { white-space:nowrap; }
-    .menu:not([hidden]) ~ .rec, .menu:not([hidden]) ~ .toHand { display:none; }   /* the hands-up menu needs the whole screen */
-    /* Record: a red dot in a white ring. While recording (or getting ready) the dot becomes a square: tap to stop. */
-    .rec { position:absolute; left:50%; bottom:22px; transform:translateX(-50%); z-index:4; width:72px; height:72px; padding:0;
-           border-radius:50%; border:4px solid #fff; background:#0004; display:grid; place-items:center; }
-    .rec i { width:54px; height:54px; border-radius:50%; background:#e5484d; transition:all .2s; }
-    .rec.on i { width:28px; height:28px; border-radius:6px; }
-    .rec[hidden] { display:none; }
+    /* Camera off: a black screen saying so. The camera button sits at the bottom centre: a red dot in a white ring turns
+       the camera on, a white ring with an X turns it off. With more than one camera, a switch button joins it (the pair stays centred). */
+    .camOff { position:absolute; inset:0; display:grid; place-items:center; font-size:1.4rem; font-weight:700; color:#888; }
+    .camOff[hidden] { display:none; }
+    .camBtns { position:absolute; left:50%; bottom:22px; transform:translateX(-50%); z-index:4; display:flex; gap:18px; align-items:center; }
+    .rec { width:72px; height:72px; padding:0; border-radius:50%; border:4px solid #fff; background:#0004; display:grid; place-items:center; position:relative; }
+    .rec i { width:54px; height:54px; border-radius:50%; background:#e5484d; }
+    .rec.on i { display:none; }
+    .rec.on::before, .rec.on::after { content:""; position:absolute; width:34px; height:4px; border-radius:2px; background:#fff; transform:rotate(45deg); }
+    .rec.on::after { transform:rotate(-45deg); }
+    .switchCam { width:52px; height:52px; padding:0; border-radius:50%; border:3px solid #fff; background:#0004; display:grid; place-items:center; }
+    .switchCam[hidden] { display:none; }
+    .menu:not([hidden]) ~ .camBtns, .menu:not([hidden]) ~ .toHand { display:none; }   /* the hands-up menu needs the whole screen */
     .toHand { position:absolute; right:0; bottom:38px; z-index:4; padding:12px 8px 12px 12px;
               border-radius:12px 0 0 12px; background:#000a; border-color:#555; border-right:0; font-weight:700; }
-    .camScreen .fullBtn { right:auto; left:10px; bottom:46px; }
+    .camScreen .fullBtn { right:10px; left:auto; top:12px; bottom:auto; }
     .history { display:flex; flex-direction:column; gap:8px; }
     .hrow { display:flex; gap:12px; align-items:center; text-align:left; width:100%; background:var(--panel); border:1px solid #2c2f35; border-radius:12px; padding:10px 12px; }
     .hrow b { font-size:1.4rem; min-width:40px; } .hrow b.ok { color:#2fb877; } .hrow b.warn { color:#f0b429; } .hrow b.bad { color:#e5484d; }
@@ -182,10 +184,10 @@
 <main id="screens" class="screens">
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <section class="screen camScreen" id="camScreen" aria-label="Camera">
     <div class="stage">
-      <div class="camTop"><h1>Salsa Sync <small id="version">v2.31</small></h1><div id="status">Tap Start camera to begin.</div></div>
+      <div class="camTop"><h1>Salsa Sync <small id="version">v2.32</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
 
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
@@ -224,8 +226,13 @@
         <button class="tile right" data-page="settings" data-act="back">← Back</button>
       </div>
       <div id="handL" class="hand" hidden></div><div id="handR" class="hand" hidden></div>
-      <button id="cameraBtn" class="startCam">▶ Start camera</button>
-      <button id="recBtn" class="rec" hidden aria-label="Start a session"><i></i></button>
+      <div id="camOff" class="camOff">Camera Off</div>
+      <div class="camBtns">
+        <button id="cameraBtn" class="rec" aria-label="Turn the camera on"><i></i></button>
+        <button id="switchCam" class="switchCam" hidden aria-label="Switch camera">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg>
+        </button>
+      </div>
       <button id="toHand" class="toHand">Menu ›</button>
       <button id="fullBtn" class="fullBtn">⛶ Full screen</button>
     </div>
@@ -240,7 +247,7 @@
     </nav>
 
     <div class="tab" id="tab-results">
-      <p id="noResults">No sessions yet. Go back to the camera and press the record button.</p>
+      <p id="noResults">No sessions yet. Turn the camera on, then raise both hands and pick Start (or use Start session in Settings).</p>
       <section id="results" hidden>
         <h2 id="resTitle">Last session</h2>
         <p id="pastNote" hidden>Viewing a past session. <button id="backLatest">Back to latest</button></p>
@@ -280,7 +287,7 @@
 
     <div class="tab" id="tab-settings" hidden>
       <h2>Session</h2>
-      <p class="legend">The record button on the camera screen and Start on the hands-up menu use these.</p>
+      <p class="legend">Start session here and Start on the hands-up menu use these.</p>
       <div id="setupDlg" class="panel">
         <h3>Music</h3>
         <div class="seg">
@@ -317,11 +324,6 @@
       <div id="settingsDlg" class="panel">
         <div class="row">
           <label><input type="checkbox" id="voice" checked> Voice</label>
-          <select id="camera" aria-label="Camera" hidden>
-            <option value="environment">Back camera</option>
-            <option value="user">Front camera</option>
-          </select>
-          <button id="stopCamBtn" hidden>Stop camera</button>
         </div>
         <h3>Audio sync <small>for your headphones or speakers</small></h3>
         <p class="legend">Bluetooth headphones and speakers play the music late, which makes every step look late. Do this once for each
@@ -351,9 +353,10 @@
     <div class="tab" id="tab-help" hidden>
       <h2>How to use it</h2>
       <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame, the room well lit and the volume up.
-         Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
+         Tap the camera button once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
          then hold a hand over a button until it fills up. Raising both hands during a session or step check stops it.</p>
-      <p>Or tap the record button at the bottom of the camera screen to start a session with the music, tempo and length chosen in Settings.
+      <p>The button at the bottom of the camera screen turns the camera on and off; with more than one camera, the button beside it switches between them.
+         You can also start a session from Settings, with the music, tempo and length chosen there.
          On a phone, swipe left from the camera for these menus and swipe right to go back.</p>
       <p>The first session after you turn the camera on starts with a body check: stand still for a few seconds
          so the app learns how much your feet wobble when they're not moving. Redo it (in Settings) if you move the camera.
@@ -411,7 +414,7 @@
   const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
   const live = $("live"), lctx = live.getContext("2d");
   const statusEl = $("status"), countEl = $("count"), phaseEl = $("phase");
-  const cameraBtn = $("cameraBtn"), camSel = $("camera"), sessionBtn = $("sessionBtn"), checkBtn = $("checkBtn");
+  const cameraBtn = $("cameraBtn"), sessionBtn = $("sessionBtn"), checkBtn = $("checkBtn");
   const draw = new DrawingUtils(ctx);
 
   let landmarker = null, stream = null, running = false;
@@ -434,24 +437,27 @@
     });
   }
 
+  // Which camera: the first time, the back camera if there is one (better picture), otherwise the only one (a laptop
+  // webcam). After that, the switch button steps through every camera found.
+  let cameras = [], cameraId = null;
   async function startCamera() {
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: camSel.value, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false,
+      video: { ...(cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" }), width: { ideal: 640 }, height: { ideal: 480 } }, audio: false,
     });
     video.srcObject = stream;
     await video.play();
     overlay.width = video.videoWidth; overlay.height = video.videoHeight;
-
-    // Only show the front/back picker on devices with more than one camera (phones).
-    // A laptop usually has one webcam, which faces you, so treat it as a front camera.
-    // (Camera names are only available after permission is granted, so we check here.)
-    const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
-    camSel.hidden = cameras.length < 2;
-    if (camSel.hidden) camSel.value = "user";
-    const mirror = camSel.value === "user";
+    // Camera names and ids are only available after permission is granted, so we list them here.
+    cameras = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
+    const settings = stream.getVideoTracks()[0].getSettings();
+    cameraId = settings.deviceId ?? null;
+    $("switchCam").hidden = cameras.length < 2;
+    // Mirror anything that isn't a back camera, so it feels like a mirror. (Laptop webcams usually don't say which way they face.)
+    const mirror = settings.facingMode !== "environment";
     video.classList.toggle("mirror", mirror); overlay.classList.toggle("mirror", mirror);
   }
+
 
   // Process each new camera frame. requestVideoFrameCallback tells us when the
   // camera actually captured the frame, which is more accurate than "now".
@@ -1411,9 +1417,8 @@
     video.srcObject = null;
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     liveHistory.length = 0;
-    cameraBtn.hidden = false; $("stopCamBtn").hidden = $("recBtn").hidden = true; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = true;
+    showCameraOn(false); sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = true;
     showPrompt(null); closeMenu();
-    statusEl.textContent = "Camera stopped.";
   }
 
   // ---------- Step check (live) ----------
@@ -1768,7 +1773,7 @@
       if (!landmarker) await loadModel();
       await startCamera();
       prefetchSongs();
-      running = true; cameraBtn.hidden = true; $("stopCamBtn").hidden = $("recBtn").hidden = false; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = false;
+      running = true; showCameraOn(true); sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = false;
       cameraBtn.disabled = false;
       scheduleNextFrame();
     } catch (err) {
@@ -1777,23 +1782,21 @@
     }
   });
 
-  $("stopCamBtn").addEventListener("click", stopCamera);
-  // Record: start a session with the music, tempo and length from Settings (body check first if needed). While a
-  // session or its body check is running it's a stop button.
-  $("recBtn").addEventListener("click", () => {
-    if (session) stopSession();
-    else if (checking && calib.forSession) cancelCalibration();
-    else if (!checking && !starting) { stopSample(); closeMenu(); beginSession(); }
-  });
-  (function recLoop() {   // square = tap to stop
-    $("recBtn").classList.toggle("on", !!session || starting || (checking && !!calib?.forSession));
-    requestAnimationFrame(recLoop);
-  })();
+  function showCameraOn(on) {
+    cameraBtn.classList.toggle("on", on); $("camOff").hidden = on;
+    cameraBtn.setAttribute("aria-label", on ? "Turn the camera off" : "Turn the camera on");
+    if (!on) $("switchCam").hidden = true;
+    statusEl.textContent = on ? "" : "Camera off.";
+  }
 
-  camSel.addEventListener("change", async () => {
-    if (!running) return;
+  // Switch camera: the next one in the list (front and back on a phone, any others on a laptop). Not during a session.
+  $("switchCam").addEventListener("click", async () => {
+    if (!running || session || checking || cameras.length < 2) return;
+    const i = cameras.findIndex(c => c.deviceId === cameraId);
+    cameraId = cameras[(i + 1) % cameras.length].deviceId;
     try { await startCamera(); liveHistory.length = 0; bodyChecked = false; } catch (err) { statusEl.textContent = "Camera error: " + err.message; }
   });
+
 
   // Start session: body check (stand still), then the music. With Auto sensitivity off, straight to the music.
   // Pressing it again cancels.
