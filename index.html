@@ -8,24 +8,46 @@
     :root { --bg:#111; --panel:#1b1b1b; --fg:#f2f2f2; --muted:#a0a0a0; --left:#4ea1ff; --right:#ff5a5f; --ok:#3ecf8e; }
     * { box-sizing: border-box; }
     body { margin:0; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    main { max-width:1200px; margin:0 auto; padding:10px 12px; }
-    header { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
     details > summary { cursor:pointer; color:var(--muted); font-size:.9rem; }
-    details.help p { margin:6px 0 0; max-width:640px; }
-    /* One screen: the video takes most of it. On a laptop (wide and landscape), controls go to the right. */
-    .layout { display:grid; gap:10px; }
-    .side { display:flex; flex-direction:column; gap:8px; min-width:0; }
-    .side .controls { margin:0; }
-    .settingsDlg { background:var(--panel); color:inherit; border:1px solid #444; border-radius:14px; padding:14px 16px;
-                   width:min(440px, calc(100vw - 32px)); max-height:calc(100svh - 32px); }
-    .settingsDlg::backdrop { background:#000a; }
-    .settingsDlg h2 { margin:0 0 8px; font-size:1.2rem; }
-    .settingsDlg h3 { margin:14px 0 2px; font-size:1rem; }
-    .settingsDlg h3 small { font-weight:400; opacity:.7; }
-    .settingsDlg p { margin:2px 0 6px; }
-    .settingsDlg .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .settingsDlg form { margin-top:12px; text-align:right; }
-    .settingsDlg form button { margin-left:8px; }
+    /* Two screens. Phone: side by side in a row you swipe through, each one screen wide (scroll snap does the swiping).
+       Laptop (media query at the end): the camera on the left, the menus in a column on the right. */
+    .screens { display:flex; height:100vh; height:100svh; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
+               scrollbar-width:none; overscroll-behavior-x:contain; }
+    .screens::-webkit-scrollbar { display:none; }
+    .screen { flex:0 0 100%; height:100%; scroll-snap-align:start; scroll-snap-stop:always; }
+    .handScreen { overflow-y:auto; padding:0 16px 40px; }
+    .handScreen > .tab { max-width:520px; margin:0 auto; }
+    .tabs { position:sticky; top:0; z-index:5; display:flex; gap:6px; padding:12px 0; background:var(--bg); max-width:520px; margin:0 auto; }
+    .tabs button { flex:1; padding:9px 4px; border-radius:999px; font-size:.9rem; }
+    .tabs button[aria-selected="true"] { background:var(--fg); color:var(--bg); border-color:var(--fg); font-weight:700; }
+    .tab[hidden] { display:none; }
+    .panel h3 { margin:14px 0 2px; font-size:1rem; }
+    .panel h3 small { font-weight:400; opacity:.7; }
+    .panel p { margin:2px 0 6px; }
+    .panel .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .dev { margin-top:24px; }
+    /* Camera screen: title and status top left, record button bottom centre, "Menu ›" on the right edge (phone only). */
+    .camTop { position:absolute; top:8px; left:12px; z-index:3; text-shadow:0 1px 4px #000; max-width:60%; pointer-events:none; }
+    .camTop #status { font-size:.8rem; color:#ddd; }
+    .startCam { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:4; padding:16px 26px; font-size:1.2rem; font-weight:700;
+                background:var(--right); border-color:var(--right); color:#fff; border-radius:999px; }
+    .startCam[hidden] { display:none; }
+    .startCam { white-space:nowrap; }
+    .menu:not([hidden]) ~ .rec, .menu:not([hidden]) ~ .toHand { display:none; }   /* the hands-up menu needs the whole screen */
+    /* Record: a red dot in a white ring. While recording (or getting ready) the dot becomes a square: tap to stop. */
+    .rec { position:absolute; left:50%; bottom:22px; transform:translateX(-50%); z-index:4; width:72px; height:72px; padding:0;
+           border-radius:50%; border:4px solid #fff; background:#0004; display:grid; place-items:center; }
+    .rec i { width:54px; height:54px; border-radius:50%; background:#e5484d; transition:all .2s; }
+    .rec.on i { width:28px; height:28px; border-radius:6px; }
+    .rec[hidden] { display:none; }
+    .toHand { position:absolute; right:0; bottom:38px; z-index:4; padding:12px 8px 12px 12px;
+              border-radius:12px 0 0 12px; background:#000a; border-color:#555; border-right:0; font-weight:700; }
+    .camScreen .fullBtn { right:auto; left:10px; bottom:46px; }
+    .history { display:flex; flex-direction:column; gap:8px; }
+    .hrow { display:flex; gap:12px; align-items:center; text-align:left; width:100%; background:var(--panel); border:1px solid #2c2f35; border-radius:12px; padding:10px 12px; }
+    .hrow b { font-size:1.4rem; min-width:40px; } .hrow b.ok { color:#2fb877; } .hrow b.warn { color:#f0b429; } .hrow b.bad { color:#e5484d; }
+    .hrow span { flex:1; font-size:.85rem; color:var(--muted); line-height:1.35; } .hrow span strong { color:var(--fg); }
+    .hrow[aria-current="true"] { border-color:#c9cdd3; }
     /* Session setup: big tap targets. A row of choices where one is picked (styled radio buttons). */
     .seg { display:flex; gap:6px; flex-wrap:wrap; }
     .seg[hidden] { display:none; }
@@ -48,7 +70,7 @@
     button, select { font:inherit; padding:10px 14px; border-radius:8px; border:1px solid #333; background:#222; color:var(--fg); }
     button.primary { background:var(--right); border-color:var(--right); color:#fff; }
     button:disabled { opacity:.45; }
-    .stage { position:relative; width:100%; height:60vh; height:60svh; background:#000; border-radius:12px; overflow:hidden; }
+    .stage { position:relative; width:100%; height:100%; background:#000; overflow:hidden; }
     video, #overlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
     .mirror { transform:scaleX(-1); }
     .count { position:absolute; top:10px; right:14px; font-size:3.2rem; font-weight:800; color:#fff; text-shadow:0 2px 8px #000; }
@@ -64,7 +86,7 @@
     .scroll { overflow-x:auto; border-radius:8px; }
     .legend { font-size:.85rem; color:var(--muted); margin-top:6px; }
     .legend b.l { color:var(--left); } .legend b.r { color:var(--right); }
-    .feet { position:absolute; top:10px; left:14px; display:flex; gap:8px; }
+    .feet { position:absolute; top:64px; left:14px; display:flex; gap:8px; }
     .feet[hidden] { display:none; }
     /* Big prompts, readable from across the room. Colour = state: amber get ready, green go, red can't see you. */
     .prompt { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:max-content; max-width:92%;
@@ -105,13 +127,6 @@
     .feet span.l.hit { background:var(--left); } .feet span.r.hit { background:var(--right); }
     .menu:not([hidden]) ~ .fullBtn { display:none; }   /* keep the corner free for the Close tile */
     /* Results summary: a tip, a score out of 100, four tiles and your typical basic. Lights: green good, amber close, red off. */
-    /* On a phone the results open as their own full screen, to read up close (Results button); Close goes back to the camera.
-       On a laptop they stay in the side column (see the media query at the end). */
-    #results:not(.open) { display:none; }
-    #results.open { position:fixed; inset:0; z-index:30; overflow-y:auto; background:var(--bg); padding:12px 16px 32px; }
-    #results .sum, #results > details, #results > .controls { max-width:480px; margin-inline:auto; }
-    .resHead { display:flex; align-items:center; justify-content:space-between; gap:10px; max-width:480px; margin:0 auto 12px; }
-    .resHead h2 { margin:0; }
     #results { --good:#2fb877; --warn:#f0b429; --bad:#e5484d; --line:#2c2f35; --soft:#c9cdd3; --ghost:#5b616b; }
     .sum { display:flex; flex-direction:column; gap:16px; }
     .eyebrow { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; }
@@ -153,44 +168,25 @@
     #fullAnalysis { margin-top:16px; }
     #fullAnalysis > summary { padding:12px; border-radius:12px; text-align:center; font-weight:700; color:var(--bg); background:var(--fg); list-style:none; }
     #fullAnalysis[open] > summary { margin-bottom:12px; }
-    /* Laptop (wide and landscape): video on the left filling the height, controls on the right. Last, so it wins. */
+    /* Laptop (wide and landscape): both screens at once, camera on the left, menus on the right. Last, so it wins. */
     @media (min-width: 900px) and (orientation: landscape) {
-      .layout { grid-template-columns:minmax(0, 1fr) 340px; }
-      .stage { height:calc(100vh - 64px); height:calc(100svh - 64px); }
-      .side { max-height:calc(100svh - 64px); overflow-y:auto; }
-      #results:not([hidden]) { display:block; position:static; padding:0; background:none; }
-      #closeResults, #resultsBtn { display:none; }
+      .screens { display:grid; grid-template-columns:minmax(0, 1fr) 400px; overflow:hidden; scroll-snap-type:none; }
+      .camScreen { padding:10px 0 10px 10px; } .camScreen .stage { border-radius:12px; }
+      .toHand { display:none; }
     }
   </style>
 </head>
 <body>
-<main>
+<!-- Two screens. On a phone you swipe between them: the camera (left) for dancing, with the hands-up menu and a record
+     button, and the menus (right) for when you're holding the phone. On a laptop both show side by side. -->
+<main id="screens" class="screens">
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
-  <header>
-    <h1>Salsa Sync <small id="version">v2.30</small></h1>
-    <details class="help"><summary>How it works</summary>
-      <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame and the volume up.
-         Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
-         then hold a hand over a button until it fills up. Raising both hands during a session or step check stops it.</p>
-      <p>The first session or step check after you turn the camera on starts with a body check: stand still for a few seconds
-         so the app learns how much your feet wobble when they're not moving. Redo it (in Settings) if you move the camera.
-         A session then shows a big 3, 2, 1, counts you in with "5, 6, 7, 8" blips and you dance two practice basics, starting on the green 1.
-         A second, higher "5, 6, 7, 8" means the real thing starts on the next 1, and that part is recorded. Step check flashes L or R each time it sees a foot land.</p>
-      <p>Bluetooth headphones and speakers play the music late, which makes every step look late. Run Audio sync in Settings
-         (or from the menu) once for each pair of headphones or speakers: march on the spot to 16 clicks and it measures the delay.
-         Filming from slightly to one side helps when your feet cross in front of each other.</p>
-      <p>Music: tapping Start session lets you pick Beat only, the built-in Salsa band (any tempo) or a real song, plus the tempo and length. In the hands-up menu, Session opens the same choices as − and + buttons, and changing the music plays a few seconds of it. The real songs are free-to-share recordings from the
-         <a href="https://freemusicarchive.org/">Free Music Archive</a>: "Cupido" and "Vamos A Tocar Sonero" by Frank Guerrero y Su Grupo Aché
-         (<a href="https://creativecommons.org/licenses/by-nc-nd/3.0/">CC BY-NC-ND 3.0</a>, played unchanged at their own tempo) and
-         "La Mujer de Antonio" by SONGO 21 (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/">CC BY-NC-SA 3.0</a>, sped up or slowed down for each tempo).
-         Details in <a href="music/README.md">music/README.md</a>.</p>
-    </details>
-  </header>
-
-  <div class="layout">
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+  <section class="screen camScreen" id="camScreen" aria-label="Camera">
     <div class="stage">
+      <div class="camTop"><h1>Salsa Sync <small id="version">v2.31</small></h1><div id="status">Tap Start camera to begin.</div></div>
+
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
       <div id="count" class="count"></div>
@@ -228,25 +224,26 @@
         <button class="tile right" data-page="settings" data-act="back">← Back</button>
       </div>
       <div id="handL" class="hand" hidden></div><div id="handR" class="hand" hidden></div>
+      <button id="cameraBtn" class="startCam">▶ Start camera</button>
+      <button id="recBtn" class="rec" hidden aria-label="Start a session"><i></i></button>
+      <button id="toHand" class="toHand">Menu ›</button>
       <button id="fullBtn" class="fullBtn">⛶ Full screen</button>
     </div>
+  </section>
 
-    <div class="side">
-      <div class="controls">
-        <button id="cameraBtn" class="primary">Start camera</button>
-        <select id="camera" aria-label="Camera" hidden>
-          <option value="environment">Back camera</option>
-          <option value="user">Front camera</option>
-        </select>
-        <button id="sessionBtn" disabled>Start session</button>
-        <button id="checkBtn" disabled>Step check</button>
-        <button id="resultsBtn" hidden>📊 Results</button>
-        <button id="settingsBtn">⚙ Settings</button>
-      </div>
-      <div id="status">Press Start camera to begin.</div>
+  <section class="screen handScreen" id="handScreen" aria-label="Menus">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="results" aria-selected="true">Results</button>
+      <button role="tab" data-tab="settings">Settings</button>
+      <button role="tab" data-tab="help">Help</button>
+      <button role="tab" data-tab="about">About</button>
+    </nav>
 
+    <div class="tab" id="tab-results">
+      <p id="noResults">No sessions yet. Go back to the camera and press the record button.</p>
       <section id="results" hidden>
-        <div class="resHead"><h2>Last session</h2><button id="closeResults">✕ Close</button></div>
+        <h2 id="resTitle">Last session</h2>
+        <p id="pastNote" hidden>Viewing a past session. <button id="backLatest">Back to latest</button></p>
         <!-- Summary: tap the score or a tile to see it on your typical basic; tap it again to go back. -->
         <div class="sum">
           <div class="card tipCard" aria-live="polite"><span class="eyebrow">Next time</span><h3 id="tipH"></h3><p id="tipP"></p></div>
@@ -275,73 +272,121 @@
         </details>
         <div class="controls" style="margin-top:10px"><button id="downloadBtn">Download session data (JSON)</button></div>
       </section>
+      <section id="historyBox" hidden>
+        <h2>History</h2>
+        <div id="history" class="history"></div>
+      </section>
+    </div>
 
-      <details><summary>Live chart (for tuning)</summary>
+    <div class="tab" id="tab-settings" hidden>
+      <h2>Session</h2>
+      <p class="legend">The record button on the camera screen and Start on the hands-up menu use these.</p>
+      <div id="setupDlg" class="panel">
+        <h3>Music</h3>
+        <div class="seg">
+          <label><input type="radio" name="kind" value="beat"><span>Beat only</span></label>
+          <label><input type="radio" name="kind" value="band"><span>Salsa band</span></label>
+          <label><input type="radio" name="kind" value="song"><span>Song</span></label>
+        </div>
+        <p id="kindNote" class="legend"></p>
+        <div id="songs" class="songs" hidden>
+          <div class="song"><label><input type="radio" name="song" value="cupido"> Cupido <small>Frank Guerrero y Su Grupo Aché · 170 BPM</small></label><button data-sample="cupido" aria-label="Play a sample of Cupido">▶</button></div>
+          <div class="song"><label><input type="radio" name="song" value="vamos"> Vamos A Tocar Sonero <small>Frank Guerrero y Su Grupo Aché · 190 BPM</small></label><button data-sample="vamos" aria-label="Play a sample of Vamos A Tocar Sonero">▶</button></div>
+          <div class="song"><label><input type="radio" name="song" value="mujer"> La Mujer de Antonio <small>SONGO 21 · any tempo</small></label><button data-sample="mujer" aria-label="Play a sample of La Mujer de Antonio">▶</button></div>
+        </div>
+        <h3>Tempo</h3>
+        <div id="tempoPick" class="seg">
+          <label><input type="radio" name="bpm" value="140"><span>140</span></label>
+          <label><input type="radio" name="bpm" value="160"><span>160</span></label>
+          <label><input type="radio" name="bpm" value="180"><span>180</span></label>
+          <label><input type="radio" name="bpm" value="200"><span>200</span></label>
+        </div>
+        <p id="songTempo" class="legend" hidden></p>
+        <h3>Length</h3>
+        <div class="seg">
+          <label><input type="radio" name="dur" value="20"><span>20 s</span></label>
+          <label><input type="radio" name="dur" value="30"><span>30 s</span></label>
+          <label><input type="radio" name="dur" value="60"><span>60 s</span></label>
+        </div>
+      </div>
+      <div class="controls" style="margin-top:12px">
+        <button id="sessionBtn" class="primary" disabled>▶ Start session</button>
+        <button id="checkBtn" disabled>👣 Step check</button>
+      </div>
+      <h2>Settings</h2>
+      <div id="settingsDlg" class="panel">
+        <div class="row">
+          <label><input type="checkbox" id="voice" checked> Voice</label>
+          <select id="camera" aria-label="Camera" hidden>
+            <option value="environment">Back camera</option>
+            <option value="user">Front camera</option>
+          </select>
+          <button id="stopCamBtn" hidden>Stop camera</button>
+        </div>
+        <h3>Audio sync <small>for your headphones or speakers</small></h3>
+        <p class="legend">Bluetooth headphones and speakers play the music late, which makes every step look late. Do this once for each
+          pair of headphones or speakers, and redo it if you switch to different ones: march on the spot, one step on every click,
+          and it measures the delay.</p>
+        <div class="row">
+          <button id="syncBtn" disabled>Sync now</button>
+          <label>Delay <input id="delay" type="range" min="0" max="400" step="10" value="0"> <span id="delayVal">0 ms</span></label>
+        </div>
+        <p id="syncNote" class="legend"></p>
+        <h3>Step sensitivity <small>for your camera and room</small></h3>
+        <p class="legend">The first time you start after turning the camera on, a 3 second body check (stand still) measures how much
+          the camera's points wobble and sets how high a foot must lift to count as a step. Redo it if you move the camera.</p>
+        <div class="row">
+          <button id="bodyBtn" disabled>Redo body check</button>
+          <label><input type="checkbox" id="autoLift" checked> Auto (body check)</label>
+          <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04" disabled> <span id="liftVal">4%</span> of leg</label>
+        </div>
+        <p id="calibNote" class="legend"></p>
+      </div>
+      <details class="dev"><summary>For developers</summary>
         <canvas id="live" class="chart"></canvas>
         <div id="liveLegend" class="legend">Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.</div>
       </details>
     </div>
-  </div>
+
+    <div class="tab" id="tab-help" hidden>
+      <h2>How to use it</h2>
+      <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame, the room well lit and the volume up.
+         Tap Start camera once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
+         then hold a hand over a button until it fills up. Raising both hands during a session or step check stops it.</p>
+      <p>Or tap the record button at the bottom of the camera screen to start a session with the music, tempo and length chosen in Settings.
+         On a phone, swipe left from the camera for these menus and swipe right to go back.</p>
+      <p>The first session after you turn the camera on starts with a body check: stand still for a few seconds
+         so the app learns how much your feet wobble when they're not moving. Redo it (in Settings) if you move the camera.
+         A session then shows a big 3, 2, 1, counts you in with "5, 6, 7, 8" blips and you dance two practice basics, starting on the green 1.
+         A second, higher "5, 6, 7, 8" means the real thing starts on the next 1, and that part is recorded.</p>
+      <p>At the end the camera screen shows your score and one tip. The Results tab has the details: four scores (Tempo, Pause length,
+         On the beat, Right beat), your typical basic, which you can tap to see each score on it, and your past sessions.</p>
+      <p>Bluetooth headphones and speakers play the music late, which makes every step look late. Run Audio sync in Settings
+         (or from the hands-up menu) once for each pair: march on the spot to 16 clicks and it measures the delay.
+         Dim light makes the camera slow down and miss steps, so turn the main light on. Filming from slightly to one side helps when your feet cross.</p>
+    </div>
+
+    <div class="tab" id="tab-about" hidden>
+      <h2>Salsa basics</h2>
+      <p>Salsa grew out of Cuban son and other Afro-Caribbean music, and took its name in New York in the 1960s and 70s.
+         The music counts in eights: 1 2 3 4 5 6 7 8.</p>
+      <p>The basic step is six steps over those eight counts: step on 1, 2, 3, hold on 4, step on 5, 6, 7, hold on 8.
+         The holds are the pause this app measures. Dancing "On1" means your first step lands on the 1, which is what Salsa Sync checks.
+         ("On2" styles break on the 2 instead.)</p>
+      <p>The clave, two wooden sticks, plays the pattern the whole band locks to; the cowbell marks the beat. In the built-in Salsa band
+         you can hear both, plus conga, piano and bass.</p>
+      <h2>About Salsa Sync</h2>
+      <p>Built for the Hacktoberfest 2026 DEV Open-Source AI Challenge. Open source (MIT) at
+         <a href="https://github.com/Luke-MS-Devlin/salsa-sync">github.com/Luke-MS-Devlin/salsa-sync</a>.
+         Everything runs on your device: the video never leaves it.</p>
+      <p>Body tracking by Google's <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker">MediaPipe Pose Landmarker</a>.
+         Songs from the <a href="https://freemusicarchive.org/">Free Music Archive</a>: "Cupido" and "Vamos A Tocar Sonero" by Frank Guerrero y Su Grupo Aché
+         (<a href="https://creativecommons.org/licenses/by-nc-nd/3.0/">CC BY-NC-ND 3.0</a>, played unchanged at their own tempo) and
+         "La Mujer de Antonio" by SONGO 21 (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/">CC BY-NC-SA 3.0</a>, sped up or slowed down for each tempo).
+         Details in <a href="music/README.md">music/README.md</a>.</p>
+    </div>
+  </section>
 </main>
-
-<!-- Opens when you tap Start session: what to dance to and for how long. The air menu's Session tile skips this and
-     reuses your last choice, because you can't tap from across the room. -->
-<dialog id="setupDlg" class="settingsDlg">
-  <h2>Session</h2>
-  <h3>Music</h3>
-  <div class="seg">
-    <label><input type="radio" name="kind" value="beat"><span>Beat only</span></label>
-    <label><input type="radio" name="kind" value="band"><span>Salsa band</span></label>
-    <label><input type="radio" name="kind" value="song"><span>Song</span></label>
-  </div>
-  <p id="kindNote" class="legend"></p>
-  <div id="songs" class="songs" hidden>
-    <div class="song"><label><input type="radio" name="song" value="cupido"> Cupido <small>Frank Guerrero y Su Grupo Aché · 170 BPM</small></label><button data-sample="cupido" aria-label="Play a sample of Cupido">▶</button></div>
-    <div class="song"><label><input type="radio" name="song" value="vamos"> Vamos A Tocar Sonero <small>Frank Guerrero y Su Grupo Aché · 190 BPM</small></label><button data-sample="vamos" aria-label="Play a sample of Vamos A Tocar Sonero">▶</button></div>
-    <div class="song"><label><input type="radio" name="song" value="mujer"> La Mujer de Antonio <small>SONGO 21 · any tempo</small></label><button data-sample="mujer" aria-label="Play a sample of La Mujer de Antonio">▶</button></div>
-  </div>
-  <h3>Tempo</h3>
-  <div id="tempoPick" class="seg">
-    <label><input type="radio" name="bpm" value="140"><span>140</span></label>
-    <label><input type="radio" name="bpm" value="160"><span>160</span></label>
-    <label><input type="radio" name="bpm" value="180"><span>180</span></label>
-    <label><input type="radio" name="bpm" value="200"><span>200</span></label>
-  </div>
-  <p id="songTempo" class="legend" hidden></p>
-  <h3>Length</h3>
-  <div class="seg">
-    <label><input type="radio" name="dur" value="20"><span>20 s</span></label>
-    <label><input type="radio" name="dur" value="30"><span>30 s</span></label>
-    <label><input type="radio" name="dur" value="60"><span>60 s</span></label>
-  </div>
-  <form method="dialog"><button value="cancel">Cancel</button><button id="setupStart" class="primary" value="start">Start</button></form>
-</dialog>
-
-<dialog id="settingsDlg" class="settingsDlg">
-  <h2>Settings</h2>
-  <div class="row">
-    <label><input type="checkbox" id="voice" checked> Voice</label>
-  </div>
-  <h3>Audio sync <small>for your headphones or speakers</small></h3>
-  <p class="legend">Bluetooth headphones and speakers play the music late, which makes every step look late. Do this once for each
-    pair of headphones or speakers, and redo it if you switch to different ones: march on the spot, one step on every click,
-    and it measures the delay.</p>
-  <div class="row">
-    <button id="syncBtn" disabled>Sync now</button>
-    <label>Delay <input id="delay" type="range" min="0" max="400" step="10" value="0"> <span id="delayVal">0 ms</span></label>
-  </div>
-  <p id="syncNote" class="legend"></p>
-  <h3>Step sensitivity <small>for your camera and room</small></h3>
-  <p class="legend">The first time you start after turning the camera on, a 3 second body check (stand still) measures how much
-    the camera's points wobble and sets how high a foot must lift to count as a step. Redo it if you move the camera.</p>
-  <div class="row">
-    <button id="bodyBtn" disabled>Redo body check</button>
-    <label><input type="checkbox" id="autoLift" checked> Auto (body check)</label>
-    <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04" disabled> <span id="liftVal">4%</span> of leg</label>
-  </div>
-  <p id="calibNote" class="legend"></p>
-  <form method="dialog"><button class="primary">Done</button></form>
-</dialog>
 
 <script type="module">
   import { PoseLandmarker, FilesetResolver, DrawingUtils }
@@ -799,16 +844,59 @@
     el.addEventListener("click", tap);
     el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tap(); } });
   });
-  // Results screen (phone): opened with the Results button, closed with Close or Escape, and whenever the camera
-  // needs to be seen again (the hands-up menu, a new session or step check).
-  const openResults = () => {
-    $("results").classList.add("open"); $("results").scrollTop = 0;
-    if ($("fullAnalysis").open) { drawSession(lastSession); drawSpread(lastSession); }   // charts need to be on screen to size
-  };
-  const closeResults = () => $("results").classList.remove("open");
-  $("resultsBtn").addEventListener("click", openResults);
-  $("closeResults").addEventListener("click", closeResults);
-  addEventListener("keydown", e => { if (e.key === "Escape") closeResults(); });
+  // ---------- Two screens and the tabs ----------
+  // Phone: the camera screen and the menus screen sit side by side and you swipe between them. Anything that needs the
+  // camera in view (a session, the hands-up menu, a step check, audio sync) scrolls back to it. On a laptop both show at
+  // once, so scrolling does nothing.
+  const screens = $("screens");
+  const goCam = () => screens.scrollTo({ left: 0, behavior: "smooth" });
+  function goHand(tab) { if (tab) showTab(tab); screens.scrollTo({ left: screens.scrollWidth, behavior: "smooth" }); }
+  function showTab(name) {
+    document.querySelectorAll(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+    document.querySelectorAll(".handScreen > .tab").forEach(t => t.hidden = t.id !== "tab-" + name);
+    if (name === "results" && $("fullAnalysis").open && lastSession?.steps) { drawSession(lastSession); drawSpread(lastSession); }
+  }
+  document.querySelectorAll(".tabs [data-tab]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  $("toHand").addEventListener("click", () => goHand());
+
+  // ---------- History ----------
+  // Each session's summary (not the video or the frames: about 1 KB) is kept on this device, newest first, up to 100.
+  // Tap one to see its summary again. Only the latest session has the full analysis and the download.
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem("history")) || []; } catch {}
+  const MUSIC_NAMES = { beat: "Beat only", band: "Salsa band" };
+  function saveToHistory(s) {
+    history.unshift({ at: Date.now(), label: `${s.song ?? MUSIC_NAMES[s.music] ?? s.music ?? "Session"} · ${Math.round(s.bpm)} BPM · ${Math.round((s.endPerf - s.startPerf) / 1000)} s`, summary: s.summary });
+    history.length = Math.min(history.length, 100);
+    try { localStorage.setItem("history", JSON.stringify(history)); } catch {}
+  }
+  const when = at => new Date(at).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  function showHistory(current = 0) {
+    $("historyBox").hidden = !history.length;
+    $("noResults").hidden = !!history.length || !!lastSession;
+    $("history").innerHTML = history.map((h, i) => {
+      const sc = h.summary.score;
+      return `<button class="hrow" data-i="${i}" aria-current="${i === current}"><b class="${sc == null ? "" : tier(sc / 100)}">${sc ?? "–"}</b>` +
+        `<span><strong>${when(h.at)}</strong><br>${h.label}<br>${h.summary.tip[0]}</span></button>`;
+    }).join("");
+    document.querySelectorAll("#history .hrow").forEach(el => el.addEventListener("click", () => viewPast(+el.dataset.i)));
+  }
+  // A past session: its summary in the same cards. The full analysis needs the recording, which only the latest has.
+  function viewPast(i, scroll = true) {
+    const latest = i === 0 && lastSession;
+    summary = latest ? lastSession.summary : history[i].summary; focus = "score";
+    $("results").hidden = false; showSummary();
+    $("resTitle").textContent = latest ? "Last session" : when(history[i].at);
+    $("pastNote").hidden = latest; $("fullAnalysis").hidden = $("downloadBtn").hidden = !latest;
+    showHistory(i);
+    if (scroll) $("handScreen").scrollTo({ top: $("results").offsetTop - 60, behavior: "smooth" });
+  }
+  $("backLatest").addEventListener("click", () => viewPast(0));
+  if (history.length) {   // after a reload: the newest saved session, without its full analysis
+    summary = history[0].summary; $("results").hidden = false; showSummary();
+    $("resTitle").textContent = when(history[0].at); $("fullAnalysis").hidden = $("downloadBtn").hidden = true;
+  }
+  showHistory(-1);
 
   // The charts in the full analysis can only be drawn once they're on screen (they take their width from the page).
   $("fullAnalysis").addEventListener("toggle", () => { if ($("fullAnalysis").open && lastSession?.steps) { drawSession(lastSession); drawSpread(lastSession); } });
@@ -1066,10 +1154,7 @@
   document.querySelectorAll("[data-sample]").forEach(btn => btn.addEventListener("click", () => {
     if (sample?.btn === btn) stopSample(); else playSample(btn.dataset.sample, 8, btn);   // tap again to stop
   }));
-  $("setupDlg").addEventListener("close", () => {
-    stopSample();
-    if ($("setupDlg").returnValue === "start") beginSession();
-  });
+  showSetup();
 
   // Convert a time on the audio clock to the same clock the camera frames use.
   function audioToPerf(audioTime) {
@@ -1084,7 +1169,6 @@
   //   Body check: 3 s standing still, once per camera start (before the first session or step check). Sets the step sensitivity (minLift) for
   //               today's camera, distance and light. "Auto" off skips it and uses the slider instead.
   //   Audio sync: march to 16 clicks, run from Settings once per pair of headphones or speakers (redo if you switch). Sets the audio delay.
-  $("settingsBtn").addEventListener("click", () => { updateTiles(); $("settingsDlg").showModal(); });
   const autoLift = () => $("autoLift").checked;
   function setAutoLift(on) {
     $("autoLift").checked = on; $("lift").disabled = on;
@@ -1110,7 +1194,7 @@
   // Audio sync: body check first if it hasn't been done since the camera started, then the 16 clicks.
   function startSync() {
     if (!running || session || checking) return;
-    $("settingsDlg").close();
+    goCam();
     if (needBodyCheck()) startCheck("sync"); else runSession("sync");
   }
   $("syncBtn").addEventListener("click", startSync);
@@ -1143,7 +1227,7 @@
   // app said "Raise both hands for the menu" just before the music started.
   let starting = false;
   async function startSession(mode = "salsa", getReadySec = GET_READY_SEC) {
-    closeResults();
+    goCam();
     const sync = mode === "sync";
     starting = true; showPrompt("Get ready", "amber", { sub: sync ? "Clicks start in a moment" : "Music starts in a moment" });
     if (!audioCtx) { audioCtx = new AudioContext({ latencyHint: "interactive" }); }
@@ -1227,7 +1311,10 @@
   // The beat counter runs on its own screen-refresh loop (about 60 times a second), not on camera frames (12-20 a
   // second, and pose tracking can hold one up), so the number changes as close to the beat as the screen allows.
   // It's shifted by the audio delay, so it changes when you HEAR the beat, not when the device sends it.
-  (function countLoop() { updateCount(performance.now() - (session?.audioDelayMs ?? 0)); requestAnimationFrame(countLoop); })();
+  (function countLoop() {
+    updateCount(performance.now() - (session?.audioDelayMs ?? 0));
+    requestAnimationFrame(countLoop);
+  })();
   function updateCount(now) {
     if (!session) { countEl.textContent = phaseEl.textContent = ""; return; }
     let current = null, i = -1;
@@ -1295,7 +1382,8 @@
     $("summary").textContent =
       `${Math.round(s.bpm)} BPM${s.song ? ` (${s.song})` : ""} · ${nBeats} beats · ${s.steps.length} steps found · ${s.frames.length} frames ` +
       `(${(s.frames.length / secs).toFixed(1)} fps) · feet clearly visible in ${Math.round(100 * visible / Math.max(1, s.frames.length))}% of frames`;
-    $("results").hidden = $("resultsBtn").hidden = false;
+    saveToHistory(s); viewPast(0, false);
+    $("toHand").textContent = summary.score == null ? "Results ›" : `${summary.score} · Results ›`;
     // Big enough to read from where you danced: the score and the tip. The rest is on the Results screen, up close.
     showPrompt(summary.score == null ? "Done!" : `${summary.score}/100`, "green",
       { sub: summary.tip[0], say: "Done. Your results are on the screen.", important: true, hideAfter: 8000 });
@@ -1323,7 +1411,7 @@
     video.srcObject = null;
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     liveHistory.length = 0;
-    cameraBtn.textContent = "Start camera"; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = true;
+    cameraBtn.hidden = false; $("stopCamBtn").hidden = $("recBtn").hidden = true; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = true;
     showPrompt(null); closeMenu();
     statusEl.textContent = "Camera stopped.";
   }
@@ -1349,7 +1437,7 @@
   const STILL_MAX = 0.06;     // feet further apart in height than this (share of leg length) means you're moving
 
   function startCheck(forSession = false) {
-    closeResults();
+    goCam();
     if (!audioCtx) audioCtx = new AudioContext({ latencyHint: "interactive" });
     audioCtx.resume();
     master = newMaster();
@@ -1480,7 +1568,7 @@
     try { localStorage.setItem("minLift", minLift); } catch {}
   });
   try { if (!autoLift() && localStorage.getItem("minLift")) { minLift = Number(localStorage.getItem("minLift")); $("lift").value = minLift; showLift(); } } catch {}
-  checkBtn.addEventListener("click", () => checking ? stopCheck() : startCheck());
+  checkBtn.addEventListener("click", () => { if (checking) stopCheck(); else { goCam(); startCheck(); } });
 
   // ---------- Big prompts and voice (so you can follow along from 3-4 m away) ----------
   // showPrompt is called every frame, so it only does something when the message changes.
@@ -1564,7 +1652,7 @@
   }
 
   function openMenu() {
-    closeResults();
+    goCam();
     menuOpen = true; $("menu").hidden = false; menuActiveAt = performance.now();
     showMenuPage("main"); showPrompt(null); updateTiles(); speak("Menu. Hold a hand over a button.");
   }
@@ -1680,7 +1768,7 @@
       if (!landmarker) await loadModel();
       await startCamera();
       prefetchSongs();
-      running = true; cameraBtn.textContent = "Stop camera"; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = false;
+      running = true; cameraBtn.hidden = true; $("stopCamBtn").hidden = $("recBtn").hidden = false; sessionBtn.disabled = checkBtn.disabled = $("syncBtn").disabled = $("bodyBtn").disabled = false;
       cameraBtn.disabled = false;
       scheduleNextFrame();
     } catch (err) {
@@ -1688,6 +1776,19 @@
       cameraBtn.disabled = false;
     }
   });
+
+  $("stopCamBtn").addEventListener("click", stopCamera);
+  // Record: start a session with the music, tempo and length from Settings (body check first if needed). While a
+  // session or its body check is running it's a stop button.
+  $("recBtn").addEventListener("click", () => {
+    if (session) stopSession();
+    else if (checking && calib.forSession) cancelCalibration();
+    else if (!checking && !starting) { stopSample(); closeMenu(); beginSession(); }
+  });
+  (function recLoop() {   // square = tap to stop
+    $("recBtn").classList.toggle("on", !!session || starting || (checking && !!calib?.forSession));
+    requestAnimationFrame(recLoop);
+  })();
 
   camSel.addEventListener("change", async () => {
     if (!running) return;
@@ -1707,13 +1808,13 @@
   function beginSession() { if (needBodyCheck()) startCheck("salsa"); else runSession("salsa"); }
   function redoBodyCheck() {
     if (!running || session || checking) return;
-    $("settingsDlg").close(); setAutoLift(true); startCheck("body");
+    goCam(); setAutoLift(true); startCheck("body");
   }
   $("bodyBtn").addEventListener("click", redoBodyCheck);
   sessionBtn.addEventListener("click", () => {
     if (session) stopSession();
     else if (checking && calib.forSession) cancelCalibration();
-    else { showSetup(); $("setupDlg").showModal(); }   // pick music, tempo and length first
+    else { stopSample(); goCam(); beginSession(); }
   });
 </script>
 </body>
