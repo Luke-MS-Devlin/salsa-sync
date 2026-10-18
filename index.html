@@ -318,9 +318,9 @@
             <div class="card"><span class="eyebrow">Tempo</span><h3 class="cap" id="dBasicCap"></h3><div class="gtitle">Your tempo for each basic was:</div><svg id="dBasic" class="dchart" viewBox="0 0 340 140"></svg>
               <hr class="split"><span class="eyebrow">123 and 567</span><h3 class="cap" id="dTempoCap"></h3><div class="gtitle">Your tempo for each half basic was:</div><svg id="dTempo" class="dchart" viewBox="0 0 340 156"></svg></div>
             <div class="card"><span class="eyebrow">Pause length</span><h3 class="cap" id="dPauseCap"></h3><div class="gtitle">How much of each 2-beat pause you held:</div><div id="dPause"></div></div>
+            <div class="card"><span class="eyebrow">Timing</span><h3 class="cap" id="dEveryCap"></h3><div class="gtitle">Your steps in each basic, on counts 1 to 8</div><div class="typ scale" id="dScale"></div><div id="dEvery"></div></div>
             <div class="card"><span class="eyebrow">On the beat</span><h3 class="cap" id="dOnCap"></h3><div class="gtitle">How early or late each step landed (ms)</div>
               <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas></div>
-            <div class="card"><span class="eyebrow">Timing</span><h3 class="cap" id="dEveryCap"></h3><div class="gtitle">Your steps in each basic, on counts 1 to 8</div><div class="typ scale" id="dScale"></div><div id="dEvery"></div></div>
             <details class="dev"><summary>For developers</summary>
           <p id="summary"></p>
           <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
@@ -1159,7 +1159,7 @@
     const pct = test => Math.round(100 * s.steps.filter(st => test(st.offset)).length / n);
     const onPct = pct(o => Math.abs(o) <= ON_TIME_MS), earlyPct = pct(o => o < -ON_TIME_MS), latePct = 100 - onPct - earlyPct;   // the rest, so they add to 100
     const onBeat = off != null && Math.abs(off) <= ON_TIME_MS;
-    $("dOnCap").innerHTML = off == null ? "No steps" : (onBeat ? "You are on the beat" : `Most steps are ${off > 0 ? "dragging" : "rushing"}`) +
+    $("dOnCap").innerHTML = off == null ? `Couldn't see any steps<small>Steps weren't detected properly. Try again or refer to the help section.</small>` : (onBeat ? "You are on the beat" : `Most steps are ${off > 0 ? "dragging" : "rushing"}`) +
       `<small>${onPct}% of your steps were on the beat. ${earlyPct}% were too early and ${latePct}% were too late. ` +
       (onBeat ? "Keep it up!" : `Try to step ${off > 0 ? "earlier" : "later"}.`) + `</small>`;
     // Every basic: one row each, the same strip as the typical basic, each step coloured by how close it was to a beat.
