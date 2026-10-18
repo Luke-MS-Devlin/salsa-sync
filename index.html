@@ -305,7 +305,7 @@
           <p id="noAnalysis" hidden>The full analysis wasn't saved for this session. Sessions from before version 2.36 only kept their summary;
              every session from now on keeps it.</p>
           <div id="analysisBody" class="sum">
-            <div class="card"><span class="eyebrow">Tempo · half-basic by half-basic</span><h3 class="cap" id="dTempoCap"></h3><div class="gtitle">Your speed for each half-basic (BPM)</div><svg id="dTempo" class="dchart" viewBox="0 0 340 156"></svg></div>
+            <div class="card"><span class="eyebrow">Tempo</span><h3 class="cap" id="dTempoCap"></h3><div class="gtitle">Your tempo for each half basic was:</div><svg id="dTempo" class="dchart" viewBox="0 0 340 156"></svg></div>
             <div class="card"><span class="eyebrow">Pause length · every basic</span><h3 class="cap" id="dPauseCap"></h3><div class="gtitle">How long you paused in each basic (beats)</div><svg id="dPause" class="dchart" viewBox="0 0 340 130"></svg></div>
             <div class="card"><span class="eyebrow">On the beat · every step</span><h3 class="cap" id="dOnCap"></h3><div class="gtitle">How early or late each step landed (ms)</div>
               <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas></div>
@@ -1093,9 +1093,8 @@
       const say = (ms, name) => Math.abs(ms - musicHalf) / musicHalf <= 0.04 ? "" : `your ${name} is ${ms < musicHalf ? "rushing" : "dragging"}`;
       const diff = f && sec && Math.abs(f - sec) / musicHalf > 0.08 ? [say(f, "123"), say(sec, "567")].filter(Boolean).join(" and ") : "";
       $("dTempoCap").innerHTML = (diff ? diff[0].toUpperCase() + diff.slice(1) : `${inBand} of ${halves.length} half-basics at the right speed`) +
-        `<small>${diff ? `${inBand} of ${halves.length} half-basics at the right speed. ` : ""}` +
-        (f && sec ? `Your 123 took ${(f / 1000).toFixed(2)} s and your 567 ${(sec / 1000).toFixed(2)} s; the music gives each ${(musicHalf / 1000).toFixed(2)} s.` : `Music ${r.bpm} BPM.`) +
-        ` Green band: ${r.bpm} ±${r.band} BPM.</small>`;
+        `<small>The music's tempo of ${r.bpm} BPM gives a half basic time of ${(musicHalf / 1000).toFixed(2)} s.` +
+        (f && sec ? ` Your 123 took ${(f / 1000).toFixed(2)} s, and your 567 took ${(sec / 1000).toFixed(2)} s.` : "") + `</small>`;
     } else { svg.innerHTML = ""; $("dTempoCap").innerHTML = `Not enough clean half-basics to measure<small>Each half needs three steps and a pause.</small>`; }
     // Pause: for every basic with 6 steps, the pause after 3 and the pause after 7 (up to the next basic's first step).
     // Two bars per basic, the dashed line at 2 beats.
