@@ -132,7 +132,8 @@
     .menuLabel b { display:block; font-size:1.3em; color:#ffd56a; }
     .tile b { display:block; font-size:.8em; color:#ffd56a; }
     .tile.left { grid-column:1; } .tile.right { grid-column:3; }
-    .tile.main { border-color:#2fb877; border-width:5px; }   /* the button you'll use most: Start */
+    .tile.main { border-color:#2fb877; border-width:5px; }
+    .tile.due { border-color:#ffd56a; border-width:5px; }   /* Full sync on a device that has never been synced */   /* the button you'll use most: Start */
     /* Small, silent notice when the camera loses you or your feet: easy to spot, but it doesn't cover the video. */
     .notice { position:absolute; left:50%; bottom:104px; transform:translateX(-50%); z-index:4; display:flex; align-items:center; gap:8px;
               padding:8px 14px; border:2px solid #e5484d; border-radius:999px; background:#000b; color:#fff; font-weight:700;
@@ -256,10 +257,10 @@
 <main id="screens" class="screens">
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.47 "Can't see you" and "Can't see your feet" are a small silent notice instead of a big spoken prompt, hands-up GUI buttons kept one button height off the floor, Start and Back at the top of the session page, title hidden while the GUI is open · 2.46 History score chart in a card, days marked under it, tap a dot to open that session · 2.45 Settings in three cards (Session, Sound, Camera) with switches and a "turn the camera on first" hint, Help rewritten as short cards (set up, hands-up GUI, a session, results, not working?, salsa basic with footprints for each count) · 2.44 On the beat tile says On the beat, Dragging, Rushing or Uneven instead of X/6 · 2.43 full analysis shows the four summary tiles in detail (tempo per half-basic with the 1 2 3 and 5 6 7 halves, every pause, every step's timing, every basic with the count it started on), raw chart under For developers · 2.42 Results no longer goes blank after opening your newest session in History and going back · 2.41 on a phone the switch-camera button flips between front and back (main lens each side) · 2.40 swiping left from full screen leaves full screen and opens Results · 2.39 Start session and Step check buttons removed (sessions start from the hands-up menu), taps right after a swipe ignored · 2.38 phone: round camera button left of the tabs, swipe left and right through Camera, Results, History, Settings, Help · 2.37 See full analysis stays visible, with a note when an older session has none saved · 2.36 Results shows only the newest session; History opens a session in place, full analysis included (kept for the newest 30) · 2.35 Results heading reads "Last Session:" and the date · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.48 Full sync button (motion sync then audio sync, yellow until a device is synced), body check renamed Motion sync, audio sync instructions shown and said in full before the countdown, louder sync clicks · 2.47 "Can't see you" and "Can't see your feet" are a small silent notice instead of a big spoken prompt, hands-up GUI buttons kept one button height off the floor, Start and Back at the top of the session page, title hidden while the GUI is open · 2.46 History score chart in a card, days marked under it, tap a dot to open that session · 2.45 Settings in three cards (Session, Sound, Camera) with switches and a "turn the camera on first" hint, Help rewritten as short cards (set up, hands-up GUI, a session, results, not working?, salsa basic with footprints for each count) · 2.44 On the beat tile says On the beat, Dragging, Rushing or Uneven instead of X/6 · 2.43 full analysis shows the four summary tiles in detail (tempo per half-basic with the 1 2 3 and 5 6 7 halves, every pause, every step's timing, every basic with the count it started on), raw chart under For developers · 2.42 Results no longer goes blank after opening your newest session in History and going back · 2.41 on a phone the switch-camera button flips between front and back (main lens each side) · 2.40 swiping left from full screen leaves full screen and opens Results · 2.39 Start session and Step check buttons removed (sessions start from the hands-up menu), taps right after a swipe ignored · 2.38 phone: round camera button left of the tabs, swipe left and right through Camera, Results, History, Settings, Help · 2.37 See full analysis stays visible, with a note when an older session has none saved · 2.36 Results shows only the newest session; History opens a session in place, full analysis included (kept for the newest 30) · 2.35 Results heading reads "Last Session:" and the date · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <section class="screen camScreen" id="camScreen" aria-label="Camera">
     <div class="stage">
-      <div class="camTop"><h1>Salsa Sync <small id="version">v2.47</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
+      <div class="camTop"><h1>Salsa Sync <small id="version">v2.48</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
 
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
@@ -273,6 +274,7 @@
         <button class="tile right" data-page="main" data-act="session">🎵 Change <b>music, tempo, length</b></button>
         <button class="tile left" data-page="main" data-act="check">👣 Step check</button>
         <button class="tile right" data-page="main" data-act="settings">⚙ Settings</button>
+        <button class="tile left" data-page="main" data-act="full" id="fullTile">🔄 Full sync <b id="tFull">new device?</b></button>
         <button class="tile right" data-page="main" data-act="close">✕ Close</button>
         <!-- Session page: pick the music, tempo and length, then Start. -->
         <button class="tile left main" data-page="session" data-act="start">▶ Start</button>
@@ -294,7 +296,7 @@
         <div class="menuLabel" data-page="settings">Lift needed<b id="tSens">Auto</b></div>
         <button class="tile right big" data-page="settings" data-act="sens+" aria-label="Sensitivity up">+</button>
         <button class="tile left" data-page="settings" data-act="sync">🎧 Audio sync <b>new headphones?</b></button>
-        <button class="tile right" data-page="settings" data-act="body">🧍 Body check <b>moved camera?</b></button>
+        <button class="tile right" data-page="settings" data-act="body">🧍 Motion sync <b>moved camera?</b></button>
         <button class="tile right" data-page="settings" data-act="back">← Back</button>
       </div>
       <div id="notice" class="notice" hidden></div>
@@ -422,12 +424,12 @@
         </div>
         <div class="card set">
           <span class="eyebrow">Camera</span>
-          <h3>Body check</h3>
+          <h3>Motion sync</h3>
           <p class="legend">Stand still for 3s so the app learns how much your camera wobbles. It runs by itself when you turn the camera on. Redo it if you move the camera.</p>
-          <div class="row"><button id="bodyBtn" disabled>Redo body check</button><span class="needCam">Turn the camera on first</span></div>
+          <div class="row"><button id="bodyBtn" disabled>Redo motion sync</button><span class="needCam">Turn the camera on first</span></div>
           <p id="calibNote" class="legend"></p>
           <hr class="split">
-          <label class="switch"><span>Set lift automatically<small>From the body check. Turn off to choose it yourself</small></span><input type="checkbox" id="autoLift" checked></label>
+          <label class="switch"><span>Set lift automatically<small>From the motion sync. Turn off to choose it yourself</small></span><input type="checkbox" id="autoLift" checked></label>
           <label class="slide">Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04" disabled> <span id="liftVal">4%</span></label>
           <p class="legend">How high a foot must lift to count as a step, as a share of your leg length. Raise it if you get extra steps, lower it if steps are missed.</p>
         </div>
@@ -446,6 +448,7 @@
           <li>Your whole body, head to feet, must be in frame.</li>
           <li>Make sure you are well lit and the volume is up.</li>
           <li>Tap the camera button once. After that you don't need to touch the screen.</li>
+          <li>First time on this device? Raise both hands and choose Full sync before your first session.</li>
         </ul>
       </div>
       <div class="card">
@@ -468,7 +471,8 @@
           <li>▶ Start: starts a session with the music, tempo and length written on the button.</li>
           <li>🎵 Change: use − and + to change the music (you hear a bit of each), tempo and length.</li>
           <li>👣 Step check: step on the spot to test that your steps are being counted.</li>
-          <li>⚙ Settings: Delay, Lift needed, Audio sync and Body check.</li>
+          <li>⚙ Settings: Delay, Lift needed, Audio sync and Motion sync.</li>
+          <li>🔄 Full sync: Motion sync, then Audio sync. Do this first on a new device. It has a yellow border until you have.</li>
           <li>✕ Close. ← Back on any page returns to the main menu.</li>
         </ul>
         <h3>Close or stop</h3>
@@ -480,7 +484,7 @@
       <div class="card">
         <span class="eyebrow">3. A session</span>
         <ol>
-          <li>Body check: stand still for 3s (only the first time after the camera turns on).</li>
+          <li>Motion sync: stand still for 3s (only the first time after the camera turns on).</li>
           <li>3, 2, 1, then "5, 6, 7, 8" counts you in.</li>
           <li>Practice: two basics, starting on the green 1.</li>
           <li>A higher "5, 6, 7, 8" means recording starts on the next 1.</li>
@@ -499,7 +503,7 @@
       <div class="card">
         <span class="eyebrow">Not working?</span>
         <ul>
-          <li>Steps missed or "Couldn't measure": make sure you are well lit, keep your feet in frame, redo the body check.</li>
+          <li>Steps missed or "Couldn't measure": make sure you are well lit, keep your feet in frame, redo the motion sync.</li>
           <li>Every step late: run Audio sync in Settings.</li>
           <li>A foot goes missing: film from slightly to one side so your feet don't overlap.</li>
           <li>Hands-up GUI won't open: step back until your head and both hands are in frame.</li>
@@ -561,7 +565,8 @@
   const COUNT_IN = 4;                                      // count-in beats before the 1
   const PRACTICE_BASICS = 2;                               // warm-up basics before recording starts
   const PRACTICE_BEATS = PRACTICE_BASICS * 8;              // one basic = one 8-count
-  const GET_READY_SEC = 5;                                 // time to walk back into frame before the count-in
+  const GET_READY_SEC = 5;
+  const SYNC_READY_SEC = 8;                                // audio sync: time to hear the instructions before the 3, 2, 1                                 // time to walk back into frame before the count-in
 
   const $ = id => document.getElementById(id);
   const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
@@ -1569,7 +1574,7 @@
 
   // ---------- Settings ----------
   // Two different calibrations:
-  //   Body check: 3 s standing still, once per camera start (before the first session or step check). Sets the step sensitivity (minLift) for
+  //   Motion sync: 3 s standing still, once per camera start (before the first session or step check). Sets the step sensitivity (minLift) for
   //               today's camera, distance and light. "Auto" off skips it and uses the slider instead.
   //   Audio sync: march to 16 clicks, run from Settings once per pair of headphones or speakers (redo if you switch). Sets the audio delay.
   const autoLift = () => $("autoLift").checked;
@@ -1594,13 +1599,20 @@
   updateTiles();
   $("delay").addEventListener("input", e => setDelay(Number(e.target.value)));
 
-  // Audio sync: body check first if it hasn't been done since the camera started, then the 16 clicks.
+  // Audio sync: motion sync first if it hasn't been done since the camera started, then the 16 clicks.
   function startSync() {
     if (!running || session || checking) return;
     goCam();
     if (needBodyCheck()) startCheck("sync"); else runSession("sync");
   }
   $("syncBtn").addEventListener("click", startSync);
+  // Full sync: motion sync then audio sync, always both. For a new device, or after moving the camera and
+  // switching headphones. A device counts as synced once an audio sync has worked on it.
+  function fullSync() {
+    if (!running || session || checking) return;
+    goCam(); setAutoLift(true); bodyChecked = false; startCheck("sync");
+  }
+  function synced() { try { return localStorage.getItem("synced") === "yes"; } catch { return true; } }
 
   // The march: one step per click. You step when you hear the click, so the typical gap between the clicks we sent
   // and your steps is the delay. The median, so a few missed or mistimed steps don't move it. If the steps were
@@ -1612,7 +1624,7 @@
     let ok = false;
     if (offsets.length < SYNC_BEATS / 2) note = `Audio sync didn't work: I couldn't see enough of your steps. The delay stays at ${audioDelay}ms. Try again with both feet in view.`;
     else if (at(0.75) - at(0.25) > 160) note = `Audio sync didn't work: your steps weren't steady enough to measure. The delay stays at ${audioDelay}ms. Try again, stepping exactly with each click.`;
-    else { setDelay(Math.max(0, at(0.5))); ok = true; note = `Audio sync done. Sound reaches you about ${audioDelay}ms late on this device, and I'll allow for that.`; }
+    else { setDelay(Math.max(0, at(0.5))); ok = true; try { localStorage.setItem("synced", "yes"); } catch {} note = `Audio sync done. Sound reaches you about ${audioDelay}ms late on this device, and I'll allow for that.`; }
     $("syncNote").textContent = note;
     updateTiles();
     showPrompt(ok ? "Synced" : "Sync didn't work", ok ? "green" : "red",
@@ -1625,14 +1637,17 @@
   let wakeLock = null, endTimer = null, pumpTimer = null;
 
   // mode "salsa" is the normal session; "sync" is the audio sync march (16 plain clicks).
-  // starting covers the moment between the body check finishing and the session existing (setting up the sound,
+  // starting covers the moment between the motion sync finishing and the session existing (setting up the sound,
   // loading a song, then a 1 s wait for the audio clock). Without it, that gap looked like "nothing running" and the
   // app said "Raise both hands for the menu" just before the music started.
   let starting = false;
   async function startSession(mode = "salsa", getReadySec = GET_READY_SEC) {
     goCam();
     const sync = mode === "sync";
-    starting = true; showPrompt("Get ready", "amber", { sub: sync ? "Clicks start in a moment" : "Music starts in a moment" });
+    if (sync) getReadySec = SYNC_READY_SEC;
+    starting = true;
+    if (sync) showPrompt("Audio sync", "amber", { sub: "march on the spot, one step on every click", say: "Audio sync. March on the spot, one step on every click.", important: true });
+    else showPrompt("Get ready", "amber", { sub: "Music starts in a moment" });
     if (!audioCtx) { audioCtx = new AudioContext({ latencyHint: "interactive" }); }
     await audioCtx.resume();
     master = newMaster();
@@ -1669,7 +1684,8 @@
       const pos = (k - COUNT_IN + 8 * 100) % 8;           // 0..7 within the 8-count
       const count = inCount ? 5 + k : pos + 1;            // count-in shows 5,6,7,8
       queue.push({ t, play: () => {
-        if (!song) cowbell(t, count === 1 || count === 5);
+        if (sync) blip(t, false, true);   // the march: one loud, clear click per beat
+        else if (!song) cowbell(t, count === 1 || count === 5);
         if (!inCount && music !== "beat" && !song) {
           for (const c of CLAVE_23) if (Math.floor(c) === pos) clave(t + (c - pos) * beatSec);
           if (CONGA.includes(pos)) conga(t);
@@ -1705,7 +1721,7 @@
     };
     statusEl.textContent = sync ? `Audio sync: after the countdown, march on the spot, one step on every click (${SYNC_BEATS} clicks)`
       : `Get into position. Countdown, ${PRACTICE_BASICS} practice basics, then a second countdown and the real thing (${Math.round(bpm)} BPM)`;
-    speak(sync ? "March on the spot, one step on every click." : "Get ready.");
+    if (!sync) speak("Get ready.");
     endTimer = setTimeout(endSession, session.endPerf - performance.now() + 300);
   }
 
@@ -1821,12 +1837,12 @@
   const CALIB_MS = 3000;
   let calib = null;    // { forSession, introUntil, start, maxDiff, done }
   let feetWereLost = false;
-  // The body check runs once per camera start, not before every session: the lift needed is measured as a share of
+  // The motion sync runs once per camera start, not before every session: the lift needed is measured as a share of
   // your leg length, so it still fits when you stand a bit nearer or further. Moving the camera (or switching camera)
-  // changes the picture, so then it's done again. Redo body check in Settings does it on request.
+  // changes the picture, so then it's done again. Redo motion sync in Settings does it on request.
   let bodyChecked = false;
   const needBodyCheck = () => autoLift() && !bodyChecked;
-  const INTRO_MS = 4000;      // time to read (and hear) what the body check is for, and get still
+  const INTRO_MS = 4000;      // time to read (and hear) what the motion sync is for, and get still
   const STILL_MAX = 0.06;     // feet further apart in height than this (share of leg length) means you're moving
 
   function startCheck(forSession = false) {
@@ -1836,7 +1852,7 @@
     master = newMaster();
     feet.left = resetFoot(); feet.right = resetFoot(); checkHistory.length = 0;
     calib = { forSession, introUntil: null, start: null, maxDiff: 0, done: false };
-    // Step check after a body check this camera run (or with Auto off): go straight to stepping.
+    // Step check after a motion sync this camera run (or with Auto off): go straight to stepping.
     if (!autoLift() || (bodyChecked && forSession !== "body")) { calib.done = true; showPrompt("Go! Start stepping", "green", { say: "Start stepping.", hideAfter: 2500 }); }
     else $("calibNote").textContent = "";
     checking = true; feetWereLost = false;
@@ -1871,14 +1887,14 @@
     checkHistory.push(row);
     while (t - checkHistory[0].t > LIVE_WINDOW_MS) checkHistory.shift();
 
-    // Body check. First say what it's for (and give you a moment to get still), then measure for 3 s, recording the
+    // Motion sync. First say what it's for (and give you a moment to get still), then measure for 3 s, recording the
     // biggest gap between the feet. It starts by itself: no need to raise your hands to say you're ready.
     if (!calib.done) {
       calib.introUntil ??= t + INTRO_MS;
       if (t < calib.introUntil) {
-        showPrompt("Body check", "amber", { sub: "stand still so I can learn your normal wobble · redo if you move the camera",
-          say: "Body check. Stand still for a few seconds, so I can learn your normal wobble." });
-        drawCheck(t, "Body check: get ready to stand still");
+        showPrompt("Motion sync", "amber", { sub: "stand still so I can learn your normal wobble · redo if you move the camera",
+          say: "Motion sync. Stand still for a few seconds, so I can learn your normal wobble." });
+        drawCheck(t, "Motion sync: get ready to stand still");
         return;
       }
       // Hands up or feet clearly moving: start the 3 s again once you're still.
@@ -1899,14 +1915,14 @@
         return;
       }
       finishCalibration();
-      if (calib.forSession === "body") {   // Redo body check: just the check
+      if (calib.forSession === "body") {   // Redo motion sync: just the check
         stopCheck({ quiet: true });
-        showPrompt("Body check done", "green", { sub: `a step needs a ${(minLift * 100).toFixed(1).replace(/\.0$/, "")}% lift`, say: "Body check done.", important: true, hideAfter: 3000 });
+        showPrompt("Motion sync done", "green", { sub: `a step needs a ${(minLift * 100).toFixed(1).replace(/\.0$/, "")}% lift`, say: "Motion sync done.", important: true, hideAfter: 3000 });
         return;
       }
-      if (calib.forSession) {   // body check done: start the music (or the audio sync clicks)
+      if (calib.forSession) {   // motion sync done: start the music (or the audio sync clicks)
         const mode = calib.forSession;
-        stopCheck({ quiet: true }); showPrompt("Get ready", "amber", { sub: mode === "sync" ? "Clicks start in a moment" : "Music starts in a moment", hideAfter: 1500 });
+        stopCheck({ quiet: true }); if (mode !== "sync") showPrompt("Get ready", "amber", { sub: "Music starts in a moment", hideAfter: 1500 });
         runSession(mode); return;
       }
       showPrompt("Go! Start stepping", "green", { say: "Done. Start stepping.", hideAfter: 2500 });
@@ -1923,7 +1939,7 @@
     // Never below the default 4%: lower than that, the standing foot's wobble while dancing counted as extra steps.
     minLift = Math.min(0.06, Math.max(MIN_LIFT, Math.round(2 * wobble / 0.005) * 0.005));
     $("lift").value = minLift; showLift();
-    $("calibNote").textContent = `Last body check: your feet wobbled up to ${(wobble * 100).toFixed(1)}% standing still` +
+    $("calibNote").textContent = `Last motion sync: your feet wobbled up to ${(wobble * 100).toFixed(1)}% standing still` +
       (2 * wobble > 0.06 ? " (that's a lot – try better light or moving closer)." : ".");
   }
 
@@ -2077,6 +2093,7 @@
       "length-": choice.dur === DURS[0], "length+": choice.dur === DURS.at(-1),
       "delay-": audioDelay <= 0, "delay+": audioDelay >= 400, "sens-": sens === SENS[0], "sens+": sens === SENS.at(-1) };
     document.querySelectorAll(".tile").forEach(t => t.classList.toggle("end", !!ends[t.dataset.act]));
+    $("fullTile").classList.toggle("due", !synced()); $("tFull").textContent = synced() ? "new device?" : "do this first";
   }
   function menuAction(act) {
     menuActiveAt = performance.now();
@@ -2103,6 +2120,7 @@
     }
     else if (act.startsWith("length")) { choice.dur = step(DURS, choice.dur, act.endsWith("+") ? 1 : -1); saveChoice(); speak(`${choice.dur} seconds`); }
     else if (act === "sync") { closeMenu(); startSync(); }
+    else if (act === "full") { closeMenu(); fullSync(); }
     else if (act === "body") { closeMenu(); redoBodyCheck(); }
     else if (act === "settings") { showMenuPage("settings"); speak("Settings."); }
     else if (act === "back") { stopSample(); showMenuPage("main"); }
@@ -2197,14 +2215,14 @@
   });
 
 
-  // A session: body check (stand still), then the music. With Auto sensitivity off, straight to the music.
+  // A session: motion sync (stand still), then the music. With Auto sensitivity off, straight to the music.
   function runSession(mode, getReadySec) {
     startSession(mode, getReadySec).catch(err => {
       statusEl.textContent = "Session error: " + err.message; session = null; starting = false;
     });
   }
   function cancelCalibration() { stopCheck({ quiet: true }); showPrompt("Cancelled", "", { hideAfter: 2000 }); }
-  // Start: body check (unless Auto is off), then the music.
+  // Start: motion sync (unless Auto is off), then the music.
   function beginSession() { if (needBodyCheck()) startCheck("salsa"); else runSession("salsa"); }
   function redoBodyCheck() {
     if (!running || session || checking) return;
