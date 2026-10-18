@@ -183,6 +183,7 @@
     #analysisBody .cap { margin:6px 0 10px; font-size:1.05rem; line-height:1.25; }
     #analysisBody .cap small { display:block; font-size:.82rem; font-weight:400; color:var(--soft); margin-top:3px; }
     .dchart { width:100%; display:block; }
+    hr.split { border:0; border-top:1px solid var(--line); margin:16px 0 12px; }
     .gtitle { font-size:.78rem; font-weight:700; color:var(--soft); margin:4px 0 6px; }
     .dchart rect.b7 { opacity:.5; } .dchart .sw { stroke:none; }
     .dchart line { stroke:var(--line); } .dchart text { fill:var(--muted); font-size:10px; }
@@ -305,7 +306,8 @@
           <p id="noAnalysis" hidden>The full analysis wasn't saved for this session. Sessions from before version 2.36 only kept their summary;
              every session from now on keeps it.</p>
           <div id="analysisBody" class="sum">
-            <div class="card"><span class="eyebrow">Tempo</span><h3 class="cap" id="dTempoCap"></h3><div class="gtitle">Your tempo for each half basic was:</div><svg id="dTempo" class="dchart" viewBox="0 0 340 156"></svg></div>
+            <div class="card"><span class="eyebrow">Tempo</span><h3 class="cap" id="dBasicCap"></h3><div class="gtitle">Your tempo for each basic was:</div><svg id="dBasic" class="dchart" viewBox="0 0 340 140"></svg>
+              <hr class="split"><span class="eyebrow">123 and 567</span><h3 class="cap" id="dTempoCap"></h3><div class="gtitle">Your tempo for each half basic was:</div><svg id="dTempo" class="dchart" viewBox="0 0 340 156"></svg></div>
             <div class="card"><span class="eyebrow">Pause length · every basic</span><h3 class="cap" id="dPauseCap"></h3><div class="gtitle">How long you paused in each basic (beats)</div><svg id="dPause" class="dchart" viewBox="0 0 340 130"></svg></div>
             <div class="card"><span class="eyebrow">On the beat · every step</span><h3 class="cap" id="dOnCap"></h3><div class="gtitle">How early or late each step landed (ms)</div>
               <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas></div>
@@ -1062,40 +1064,60 @@
   function drawAnalysis(a) {
     drawSession(a); drawSpread(a);
     const s = sessionOf(a), r = summarise(s), T = r.T, P = 60000 / s.bpm, basics = cutBasics(s);
-    // Tempo: how long each half-basic took (first step after one pause to the first step after the next), as BPM.
-    // Filled dots are the 123 half, rings the 567 half (by the count the half started on), so a dancer who rushes
-    // one half and drags the other shows up even when their whole basic is the right length.
+    // Tempo, two graphs on the same scale: every full basic (are you rushing or dragging overall?), then every half
+    // (is it your 123 or your 567?). A half-basic runs from the first step after one pause to the first step after the
+    // next; a basic is a 123 half followed straight away by a 567 half. Each is turned into BPM.
     const real = s.beats.filter(b => !b.countIn), countAt = t => real.findLast(b => b.t + s.audioDelayMs <= t + P / 2)?.count ?? 1;
     const starts = [];
     s.steps.forEach((st, i) => { if (i === 0 || st.t - s.steps[i - 1].t > 1.4 * P) starts.push(st.t); });
-    const halves = starts.slice(1).map((t, i) => ({ ms: t - starts[i], first: countAt(starts[i]) <= 4, mid: (t + starts[i]) / 2 }))
+    const halves = starts.slice(1).map((t, i) => ({ t0: starts[i], t1: t, ms: t - starts[i], first: countAt(starts[i]) <= 4, mid: (t + starts[i]) / 2 }))
       .filter(h => h.ms > 2.5 * P && h.ms < 6 * P).map(h => ({ ...h, bpm: Math.round(s.bpm * 4 * P / h.ms) }));
-    const svg = $("dTempo"), lo = r.bpm - 2 * r.band, hi = r.bpm + 2 * r.band, y = v => 110 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * 100;
+    const fulls = halves.slice(0, -1).flatMap((h, i) => h.first && !halves[i + 1].first && halves[i + 1].t0 === h.t1
+      ? [{ mid: (h.t0 + halves[i + 1].t1) / 2, bpm: Math.round(s.bpm * 8 * P / (h.ms + halves[i + 1].ms)), first: true }] : []);
+    const lo = r.bpm - 2 * r.band, hi = r.bpm + 2 * r.band, y = v => 110 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * 100;
     const bpmTier = b => Math.abs(b - r.bpm) <= r.band ? "ok" : Math.abs(b - r.bpm) <= 2 * r.band ? "warn" : "bad";
-    if (halves.length >= 2) {
-      // Across: time in seconds from the first beat of the music, each dot in the middle of its half-basic.
-      const t0 = (real[0]?.t ?? s.steps[0].t) + s.audioDelayMs, secs = Math.max(1, (real.at(-1)?.t ?? s.steps.at(-1).t) + s.audioDelayMs - t0) / 1000;
-      const tx = sec => 34 + Math.max(0, Math.min(1, sec / secs)) * 296, x = i => tx((halves[i].mid - t0) / 1000);
-      const every = secs <= 40 ? 5 : secs <= 90 ? 10 : 30;
+    // Across: time in seconds from the first beat of the music, each dot in the middle of its basic or half.
+    const t0 = (real[0]?.t ?? s.steps[0]?.t ?? 0) + s.audioDelayMs, secs = Math.max(1, (real.at(-1)?.t ?? s.steps.at(-1)?.t ?? 0) + s.audioDelayMs - t0) / 1000;
+    const tx = sec => 34 + Math.max(0, Math.min(1, sec / secs)) * 296, every = secs <= 40 ? 5 : secs <= 90 ? 10 : 30;
+    function tempoChart(svg, pts, key) {
+      if (pts.length < 2) { svg.innerHTML = ""; return; }
+      const x = p => tx((p.mid - t0) / 1000);
       svg.innerHTML = `<rect class="band" x="34" width="296" y="${y(r.bpm + r.band)}" height="${y(r.bpm - r.band) - y(r.bpm + r.band)}"/>` +
         Array.from({ length: Math.floor(hi / 10) - Math.ceil(lo / 10) + 1 }, (_, i) => (Math.ceil(lo / 10) + i) * 10)   // a line every 10 BPM
           .map(v => `<line x1="34" x2="330" y1="${y(v)}" y2="${y(v)}"/><text x="12" y="${y(v) + 3}">${v}</text>`).join("") +
         `<text transform="translate(7 ${y(r.bpm)}) rotate(-90)" text-anchor="middle">BPM</text>` +
-        `<polyline points="${halves.map((h, i) => `${x(i)},${y(h.bpm)}`).join(" ")}"/>` +
-        halves.map((h, i) => `<circle cx="${x(i)}" cy="${y(h.bpm)}" r="3.5" class="${bpmTier(h.bpm)}${h.first ? "" : " ring"}"/>`).join("") +
         `<line class="music" x1="34" x2="330" y1="${y(r.bpm)}" y2="${y(r.bpm)}"/>` +                     // the music's tempo
+        `<polyline points="${pts.map(p => `${x(p)},${y(p.bpm)}`).join(" ")}"/>` +
+        pts.map(p => `<circle cx="${x(p)}" cy="${y(p.bpm)}" r="3.5" class="${bpmTier(p.bpm)}${p.first ? "" : " ring"}"/>`).join("") +
         Array.from({ length: Math.floor(secs / every) + 1 }, (_, i) => i * every)
           .map(v => `<text x="${tx(v)}" y="123" text-anchor="middle">${v}</text>`).join("") +
-        `<text x="182" y="136" text-anchor="middle">Time (seconds)</text>` +
-        `<text x="182" y="152" text-anchor="middle">● 123   ○ 567</text>`;
-      const inBand = halves.filter(h => bpmTier(h.bpm) === "ok").length, musicHalf = 4 * P;
-      const f = median(halves.filter(h => h.first).map(h => h.ms)), sec = median(halves.filter(h => !h.first).map(h => h.ms));
-      const say = (ms, name) => Math.abs(ms - musicHalf) / musicHalf <= 0.04 ? "" : `your ${name} is ${ms < musicHalf ? "rushing" : "dragging"}`;
-      const diff = f && sec && Math.abs(f - sec) / musicHalf > 0.08 ? [say(f, "123"), say(sec, "567")].filter(Boolean).join(" and ") : "";
-      $("dTempoCap").innerHTML = (diff ? diff[0].toUpperCase() + diff.slice(1) : `${inBand} of ${halves.length} half-basics at the right speed`) +
-        `<small>The music's tempo of ${r.bpm} BPM gives a half basic time of ${(musicHalf / 1000).toFixed(2)} s.` +
-        (f && sec ? ` Your 123 took ${(f / 1000).toFixed(2)} s, and your 567 took ${(sec / 1000).toFixed(2)} s.` : "") + `</small>`;
-    } else { svg.innerHTML = ""; $("dTempoCap").innerHTML = `Not enough clean half-basics to measure<small>Each half needs three steps and a pause.</small>`; }
+        `<text x="182" y="136" text-anchor="middle">Time (seconds)</text>` + (key ? `<text x="182" y="152" text-anchor="middle">● 123   ○ 567</text>` : "");
+    }
+    // Every basic: judged like the Tempo tile, so the words match the summary.
+    const word = { true: "on tempo", fast: "rushing", slow: "dragging" };
+    const overall = !r.tiles.t ? null : r.tiles.t.good ? word.true : r.yourBpm > r.bpm ? word.fast : word.slow;
+    tempoChart($("dBasic"), fulls, false);
+    $("dBasicCap").innerHTML = !overall ? `Couldn't measure your basics<small>Each basic needs three steps, a pause, three steps and a pause.</small>`
+      : `Your basics are ${overall}<small>The music's tempo of ${r.bpm} BPM gives a basic time of ${(8 * P / 1000).toFixed(2)} s. Your typical basic took ` +
+        `${(r.yoursMs / 1000).toFixed(2)} s, which is ${r.yourBpm} BPM.${fulls.length ? ` ${fulls.filter(f => bpmTier(f.bpm) === "ok").length} of ${fulls.length} basics were in the green band (${r.bpm} ±${r.band}).` : ""}</small>`;
+    // 123 and 567: each half's typical time as BPM, judged with the same green band.
+    tempoChart($("dTempo"), halves, true);
+    const musicHalf = 4 * P, typ = first => median(halves.filter(h => h.first === first).map(h => h.ms));
+    const f = typ(true), sec = typ(false), asBpm = ms => Math.round(s.bpm * musicHalf / ms);
+    const halfOff = ms => Math.abs(asBpm(ms) - r.bpm) <= r.band ? 0 : asBpm(ms) > r.bpm ? 1 : -1;   // 1 rushing, −1 dragging
+    let head, tip = "";
+    if (!f || !sec) head = "Couldn't compare your 123 and 567";
+    else {
+      const a = halfOff(f), b = halfOff(sec), verb = d => d > 0 ? "rushing" : "dragging", fix = d => d > 0 ? "Slow down" : "Speed up";
+      if (!a && !b) head = "Your 123 and 567 are even";
+      else if (a && b && a === b) { head = `Both halves are ${verb(a)}`; tip = ` ${fix(a)} your whole basic.`; }
+      else {   // only one off, or both off in opposite ways: change the one further from the music
+        const which = !b || (a && Math.abs(asBpm(f) - r.bpm) >= Math.abs(asBpm(sec) - r.bpm)) ? ["123", a] : ["567", b];
+        head = `Your ${which[0]} is ${verb(which[1])}`; tip = ` ${fix(which[1])} your ${which[0]}.`;
+      }
+    }
+    $("dTempoCap").innerHTML = head + `<small>The music's tempo of ${r.bpm} BPM gives a half basic time of ${(musicHalf / 1000).toFixed(2)} s.` +
+      (f && sec ? ` Your 123 took ${(f / 1000).toFixed(2)} s (${asBpm(f)} BPM), and your 567 took ${(sec / 1000).toFixed(2)} s (${asBpm(sec)} BPM).` : "") + tip + `</small>`;
     // Pause: for every basic with 6 steps, the pause after 3 and the pause after 7 (up to the next basic's first step).
     // Two bars per basic, the dashed line at 2 beats.
     const pauses = basics.map((b, i) => b.dots.length !== 6 ? null : [b.dots[3] - b.dots[2],
