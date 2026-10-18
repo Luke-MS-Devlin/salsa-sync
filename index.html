@@ -179,6 +179,24 @@
     .tbar b.ok { background:var(--good); } .tbar b.warn { background:var(--warn); } .tbar b.bad { background:var(--bad); }
     .tbar b i { position:absolute; top:0; bottom:0; width:1px; background:#0006; }
     #fullAnalysis { margin-top:16px; }
+    /* Full analysis: the four tiles again, in more detail, then every basic one by one. */
+    #analysisBody .cap { margin:6px 0 10px; font-size:1.05rem; line-height:1.25; }
+    #analysisBody .cap small { display:block; font-size:.82rem; font-weight:400; color:var(--soft); margin-top:3px; }
+    .dchart { width:100%; display:block; }
+    .dchart line { stroke:var(--line); } .dchart text { fill:var(--muted); font-size:10px; }
+    .dchart .band { fill:#2fb87722; } .dchart polyline { fill:none; stroke:var(--soft); stroke-width:1.5; }
+    .dchart circle.ok { fill:var(--good); } .dchart circle.warn { fill:var(--warn); } .dchart circle.bad { fill:var(--bad); }
+    #dPause .tbar { grid-template-columns:52px 1fr 70px; } #dPause .tbar em { white-space:nowrap; }
+    .pbar { position:relative; } .pbar > i { position:absolute; left:66.7%; top:-3px; bottom:-3px; width:2px; background:var(--fg); }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .chips span { min-width:34px; padding:4px 7px; border-radius:8px; text-align:center; font-size:.75rem; font-weight:700; color:#0b0c0e; background:var(--ghost); }
+    .chips span small { display:block; font-size:.6rem; font-weight:600; opacity:.7; }
+    .chips .ok { background:var(--good); } .chips .warn { background:var(--warn); } .chips .bad { background:var(--bad); color:#fff; }
+    .pcts { position:relative; height:16px; margin:0 12px; } .pcts span { position:absolute; transform:translateX(-50%); font-size:.7rem; color:var(--soft); }
+    .brow { display:grid; grid-template-columns:22px 1fr; align-items:center; } .brow > b { font-size:.7rem; color:var(--muted); text-align:right; }
+    .brow .typ { height:24px; } .brow .typ .zone { height:24px; } .brow .typ .g, .brow .typ .s { top:12px; width:15px; height:15px; font-size:.55rem; }
+    .brow .typ .s.x { background:transparent; border:1.5px solid var(--soft); color:var(--soft); }
+    details.dev > summary { color:var(--muted); font-size:.85rem; padding:6px 0; cursor:pointer; }
     #fullAnalysis > summary { padding:12px; border-radius:12px; text-align:center; font-weight:700; color:var(--bg); background:var(--fg); list-style:none; }
     #fullAnalysis[open] > summary { margin-bottom:12px; }
     /* Laptop (wide and landscape): both screens at once, camera on the left, menus on the right. Last, so it wins. */
@@ -195,10 +213,10 @@
 <main id="screens" class="screens">
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.42 Results no longer goes blank after opening your newest session in History and going back · 2.41 on a phone the switch-camera button flips between front and back (main lens each side) · 2.40 swiping left from full screen leaves full screen and opens Results · 2.39 Start session and Step check buttons removed (sessions start from the hands-up menu), taps right after a swipe ignored · 2.38 phone: round camera button left of the tabs, swipe left and right through Camera, Results, History, Settings, Help · 2.37 See full analysis stays visible, with a note when an older session has none saved · 2.36 Results shows only the newest session; History opens a session in place, full analysis included (kept for the newest 30) · 2.35 Results heading reads "Last Session:" and the date · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.43 full analysis shows the four summary tiles in detail (tempo half by half, each pause, timing and on the beat basic by basic, every basic), raw chart under For developers · 2.42 Results no longer goes blank after opening your newest session in History and going back · 2.41 on a phone the switch-camera button flips between front and back (main lens each side) · 2.40 swiping left from full screen leaves full screen and opens Results · 2.39 Start session and Step check buttons removed (sessions start from the hands-up menu), taps right after a swipe ignored · 2.38 phone: round camera button left of the tabs, swipe left and right through Camera, Results, History, Settings, Help · 2.37 See full analysis stays visible, with a note when an older session has none saved · 2.36 Results shows only the newest session; History opens a session in place, full analysis included (kept for the newest 30) · 2.35 Results heading reads "Last Session:" and the date · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <section class="screen camScreen" id="camScreen" aria-label="Camera">
     <div class="stage">
-      <div class="camTop"><h1>Salsa Sync <small id="version">v2.42</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
+      <div class="camTop"><h1>Salsa Sync <small id="version">v2.43</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
 
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
@@ -283,13 +301,20 @@
         <details id="fullAnalysis"><summary>See full analysis</summary>
           <p id="noAnalysis" hidden>The full analysis wasn't saved for this session. Sessions from before version 2.36 only kept their summary;
              every session from now on keeps it.</p>
-          <div id="analysisBody">
-          <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas>
+          <div id="analysisBody" class="sum">
+            <div class="card"><span class="eyebrow">Tempo · half by half</span><h3 class="cap" id="dTempoCap"></h3><svg id="dTempo" class="dchart" viewBox="0 0 340 130"></svg></div>
+            <div class="card"><span class="eyebrow">Pause length · each half</span><h3 class="cap" id="dPauseCap"></h3><div id="dPause"></div></div>
+            <div class="card"><span class="eyebrow">Timing · basic by basic</span><h3 class="cap" id="dTimingCap"></h3><div id="dTiming" class="chips"></div></div>
+            <div class="card"><span class="eyebrow">On the beat · step by step</span><h3 class="cap" id="dOnCap"></h3><div id="dOn"></div>
+              <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas></div>
+            <div class="card"><span class="eyebrow">Every basic</span><h3 class="cap" id="dEveryCap"></h3><div class="typ scale" id="dScale"></div><div id="dEvery"></div></div>
+            <details class="dev"><summary>For developers</summary>
           <p id="summary"></p>
           <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
           <div class="legend">Grey lines are beats; the thicker ones are the 1 and the 5. Each ▲ along the bottom is a detected step
             (<b class="l">left</b> or <b class="r">right</b> foot), placed where the foot comes back down, because the step
             counts when your weight lands, not when your foot is highest. Steps on time sit on a beat line.</div>
+            </details>
           </div>
         </details>
         <div class="controls" style="margin-top:10px"><button id="downloadBtn">Download session data (JSON)</button></div>
@@ -938,8 +963,8 @@
     const secs = (s.endPerf - s.startPerf) / 1000, nBeats = s.beats.filter(b => !b.countIn && !b.practice).length;
     const visible = s.frames.filter(f => FOOT_POINTS.every(i => f.pts[i][2] > 0.5)).length;
     return {
-      startPerf: Math.round(s.startPerf), endPerf: Math.round(s.endPerf), audioDelayMs: s.audioDelayMs ?? 0,
-      beats: s.beats.map(b => ({ t: Math.round(b.t), count: b.count })),
+      startPerf: Math.round(s.startPerf), endPerf: Math.round(s.endPerf), audioDelayMs: s.audioDelayMs ?? 0, bpm: s.bpm,
+      beats: s.beats.map(b => ({ t: Math.round(b.t), count: b.count, ...(b.countIn || b.practice ? { w: 1 } : {}) })),
       steps: s.steps.map(st => ({ t: Math.round(st.t), foot: st.foot, offset: st.offset })),
       report: { unreliable: s.report.unreliable, earlyPct: s.report.earlyPct, latePct: s.report.latePct, onTimePct: s.report.onTimePct },
       ankles: s.frames.map(f => [Math.round(f.t), +(1 - f.pts[L_ANKLE][1]).toFixed(3), +(1 - f.pts[R_ANKLE][1]).toFixed(3)]),
@@ -999,7 +1024,7 @@
     $("resTitle").textContent = (where === "tab-results" ? "Last Session: " : "") + when(shown.at);
     $("analysisBody").hidden = !shown.analysis; $("noAnalysis").hidden = !!shown.analysis; $("summary").textContent = shown.analysis?.line ?? "";
     $("downloadBtn").hidden = !(i === 0 && lastSession);
-    if ($("fullAnalysis").open && shown.analysis) { drawSession(shown.analysis); drawSpread(shown.analysis); }
+    if ($("fullAnalysis").open && shown.analysis) drawAnalysis(shown.analysis);
   }
   function showLatest() {   // (left alone if it's already there, so a tapped tile stays selected)
     const already = shown === history[0] && $("tab-results").contains($("results")) && !$("results").hidden;
@@ -1019,7 +1044,67 @@
   showHistory(-1);
 
   // The charts in the full analysis can only be drawn once they're on screen (they take their width from the page).
-  $("fullAnalysis").addEventListener("toggle", () => { if ($("fullAnalysis").open && shown?.analysis) { drawSession(shown.analysis); drawSpread(shown.analysis); } });
+  $("fullAnalysis").addEventListener("toggle", () => { if ($("fullAnalysis").open && shown?.analysis) drawAnalysis(shown.analysis); });
+
+  // ---------- Full analysis ----------
+  // The same four things as the summary, in more detail, then every basic on its own row. Everything is worked out
+  // again from the saved beats and steps. Sessions saved before 2.43 didn't keep the tempo or which beats were the
+  // count-in, so for those the tempo comes from the beat gaps and beats before your first step count as count-in.
+  function sessionOf(a) {
+    const gaps = a.beats.slice(1).map((b, i) => b.t - a.beats[i].t), bpm = a.bpm ?? 60000 / median(gaps);
+    const first = a.steps[0]?.t ?? Infinity, P = 60000 / bpm;
+    return { ...a, bpm, beats: a.beats.map(b => ({ ...b, countIn: a.bpm ? !!b.w : b.t < first - 1.5 * P })) };
+  }
+  const nearMs = (p, P) => Math.abs(p - Math.round(p)) * P;
+  const stepTier = ms => ms <= ON_TIME_MS ? "ok" : ms <= 2 * ON_TIME_MS ? "warn" : "bad";
+  function drawAnalysis(a) {
+    drawSession(a); drawSpread(a);
+    const s = sessionOf(a), r = summarise(s), T = r.T, P = 60000 / s.bpm, basics = cutBasics(s);
+    // Tempo: how long each half-basic took (first step after one pause to the first step after the next), as BPM.
+    const starts = [];
+    s.steps.forEach((st, i) => { if (i === 0 || st.t - s.steps[i - 1].t > 1.4 * P) starts.push(st.t); });
+    const halves = starts.slice(1).map((t, i) => t - starts[i]).filter(h => h > 2.5 * P && h < 6 * P).map(h => Math.round(s.bpm * 4 * P / h));
+    const svg = $("dTempo"), lo = r.bpm - 40, hi = r.bpm + 40, y = v => 110 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * 100;
+    if (halves.length >= 2) {
+      const x = i => 34 + i * (296 / (halves.length - 1));
+      svg.innerHTML = `<rect class="band" x="34" width="296" y="${y(r.bpm + r.band)}" height="${y(r.bpm - r.band) - y(r.bpm + r.band)}"/>` +
+        [lo, r.bpm, hi].map(v => `<line x1="34" x2="330" y1="${y(v)}" y2="${y(v)}"/><text x="0" y="${y(v) + 3}">${v}</text>`).join("") +
+        `<polyline points="${halves.map((b, i) => `${x(i)},${y(b)}`).join(" ")}"/>` +
+        halves.map((b, i) => `<circle cx="${x(i)}" cy="${y(b)}" r="3.5" class="${Math.abs(b - r.bpm) <= r.band ? "ok" : Math.abs(b - r.bpm) <= 2 * r.band ? "warn" : "bad"}"/>`).join("") +
+        `<text x="34" y="127">start</text><text x="330" y="127" text-anchor="end">end</text>`;
+      const inBand = halves.filter(b => Math.abs(b - r.bpm) <= r.band).length;
+      $("dTempoCap").innerHTML = `${inBand} of ${halves.length} halves at the right speed<small>Music ${r.bpm} BPM (green band ±${r.band}). Yours ranged from ${Math.min(...halves)} to ${Math.max(...halves)}.</small>`;
+    } else { svg.innerHTML = ""; $("dTempoCap").innerHTML = `Not enough clean halves to measure<small>Each half needs three steps and a pause.</small>`; }
+    // Pause: after 3 and after 7 on their own (the summary averages them). A bar per half, a tick at 2 beats.
+    const pauseRow = (label, v) => { const light = Math.abs(v - 2) <= 0.25 ? "ok" : Math.abs(v - 2) <= 0.75 ? "warn" : "bad";
+      return `<div class="tbar"><span>${label}</span><div class="pbar"><b class="${light}" style="width:${Math.min(100, v / 3 * 100)}%"></b><i></i></div><em>${v.toFixed(1)} beats</em></div>`; };
+    if (T) {
+      const p3 = T.dots[3] - T.dots[2], p7 = 8 + T.dots[0] - T.dots[5];
+      const word = v => Math.abs(v - 2) <= 0.25 ? "just right" : v < 2 ? "too short" : "too long";
+      $("dPauseCap").innerHTML = (word(p3) === word(p7) ? `Both pauses ${word(p3)}` : `After 3 ${word(p3)}, after 7 ${word(p7)}`) +
+        `<small>Each should last two beats, on 4 and 8 (the white tick).</small>`;
+      $("dPause").innerHTML = pauseRow("After 3", p3) + pauseRow("After 7", p7);
+    } else { $("dPauseCap").innerHTML = `Couldn't measure<small>Needs a typical basic.</small>`; $("dPause").innerHTML = ""; }
+    // Timing: which count each basic started on. A basic with missing or extra steps gets a grey "?".
+    const shifts = basics.map(b => b.dots.length === 6 ? median(b.dots.map((p, k) => Math.round(p) - SLOTS[k])) : null);
+    const onOne = shifts.filter(v => v === 0).length;
+    $("dTimingCap").innerHTML = basics.length ? `${onOne} of ${basics.length} basics started on the 1<small>Numbered in order. Grey: missing or extra steps, so I couldn't tell.</small>` : "No whole basics";
+    $("dTiming").innerHTML = shifts.map((v, i) => `<span class="${v == null ? "" : v === 0 ? "ok" : Math.abs(v) === 1 ? "warn" : "bad"}"><small>${i + 1}</small>${v == null ? "?" : v === 0 ? "On 1" : `${Math.abs(v)} ${v > 0 ? "late" : "early"}`}</span>`).join("");
+    // On the beat: each step of the typical basic, with how often it landed within 80 ms of a beat, then the spread.
+    const off = median(s.steps.map(st => st.offset));
+    $("dOnCap").innerHTML = off == null ? "No steps" : `${Math.abs(off) <= 20 ? "Your steps land right on the beat" : `Most steps land about ${Math.round(Math.abs(off) / 10) * 10} ms ${off > 0 ? "late" : "early"}`}` +
+      `<small>${T ? "Each step of your typical basic, and how often it landed on the beat." : ""} Then every step: on the beat is within ${ON_TIME_MS} ms.</small>`;
+    $("dOn").innerHTML = T ? typicalStrip(r, "o") + `<div class="pcts">${T.dots.map((p, j) => p >= LO && p < HI ? `<span style="left:${X(p)}%">${Math.round(100 * T.onShare[j])}%</span>` : "").join("")}</div>` : "";
+    // Every basic: one row each, the same strip as the typical basic, each step coloured by how close it was to a beat.
+    $("dScale").innerHTML = $("typScale").innerHTML;
+    const zones = [3, 7].map(p => `<span class="zone" style="left:${X(p - 0.5)}%;width:${X(p + 0.5) - X(p - 0.5)}%"></span>`).join("");
+    const ghosts = SLOTS.map(p => `<span class="g" style="left:${X(p)}%"></span>`).join("");
+    $("dEvery").innerHTML = basics.map((b, i) => `<div class="brow"><b>${i + 1}</b><div class="typ">${zones}${ghosts}` +
+      b.dots.map((p, j) => p >= LO && p < HI ? `<span class="s ${stepTier(nearMs(p, P))}" style="left:${X(p)}%">${b.feet[j]}</span>` : "").join("") + `</div></div>`).join("");
+    const clean = basics.filter(b => b.dots.length === 6 && b.dots.every(p => nearMs(p, P) <= ON_TIME_MS)).length;
+    $("dEveryCap").innerHTML = basics.length ? `${clean} of ${basics.length} basics were clean<small>All 6 steps within ${ON_TIME_MS} ms. Amber within ${2 * ON_TIME_MS} ms, red further off. Dashed circles are where steps should go.</small>`
+      : `No whole basics<small>Basics are cut from the first 1 after the count-in, 8 beats each.</small>`;
+  }
 
   // ---------- Charts ----------
   function sizeCanvas(c, w, h) {
