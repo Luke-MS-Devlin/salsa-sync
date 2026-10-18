@@ -1140,9 +1140,16 @@
       const avg = k => median(pauses.filter(Boolean).map(pp => pp[k]));
       const word = v => v == null ? null : Math.abs(v - 2) <= 0.25 ? "just right" : v < 2 ? "too short" : "too long";
       const w4 = word(avg(0)), w8 = word(avg(1));
+      // One line on what to change: longer or shorter, on the 4th, the 8th or both (nothing when both are right).
+      function pauseAdvice(p4, p8) {
+        const way = v => v == null || Math.abs(v - 2) <= 0.25 ? null : v < 2 ? "longer" : "shorter", a4 = way(p4), a8 = way(p8);
+        if (!a4 && !a8) return "";
+        if (a4 && a8) return a4 === a8 ? ` You should pause ${a4} on both pauses.` : ` You should pause longer on the ${a4 === "longer" ? "4th" : "8th"} beat and shorter on the ${a4 === "longer" ? "8th" : "4th"} beat.`;
+        return ` You should pause ${a4 || a8} on the ${a4 ? "4th" : "8th"} beat.`;
+      }
       $("dPauseCap").innerHTML = (!w8 || w4 === w8 ? `${w8 ? "Both pauses are" : "Your pause is"} ${w4}` : `Your 4th-beat pause is ${w4}, your 8th-beat pause is ${w8}`) +
-        `<small>Each dashed box is a 2-beat pause. Fill the box to hold for the full 2 beats. Your pause on the 4th beat was typically ` +
-        `${avg(0).toFixed(1)} beats${avg(1) != null ? `, and on the 8th, ${avg(1).toFixed(1)} beats` : ""}. "?" means that basic had missing or extra steps.</small>`;
+        `<small>Each pause should be around 2 beats. Your typical pause was ${avg(0).toFixed(1)} beats on the 4th beat` +
+        (avg(1) != null ? `, and was ${avg(1).toFixed(1)} beats on the 8th beat.` : ".") + pauseAdvice(avg(0), avg(1)) + `</small>`;
     } else { $("dPause").innerHTML = ""; $("dPauseCap").innerHTML = `Couldn't measure<small>Needs basics with 6 steps.</small>`; }
     // On the beat: every step, by how early or late it landed.
     const off = median(s.steps.map(st => st.offset));
