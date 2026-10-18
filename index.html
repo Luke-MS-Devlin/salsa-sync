@@ -144,6 +144,24 @@
     .sum { display:flex; flex-direction:column; gap:16px; }
     .eyebrow { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; }
     .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px 18px; }
+    .set h3 { margin:16px 0 4px; font-size:1rem; } .set h3 small { font-weight:400; color:var(--muted); }
+    .set .legend { margin:2px 0 8px; } .set .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .tab > .card + .card, #settingsDlg > .card, #settingsDlg { margin-top:12px; }
+    .switch { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; font-weight:600; }
+    .switch small { display:block; font-weight:400; font-size:.85rem; color:var(--muted); }
+    .switch input { appearance:none; width:48px; height:28px; border-radius:14px; background:#444; position:relative; flex:none; cursor:pointer; transition:background .2s; }
+    .switch input::after { content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; transition:left .2s; }
+    .switch input:checked { background:var(--ok); } .switch input:checked::after { left:23px; }
+    .slide { display:flex; align-items:center; gap:10px; margin:12px 0 4px; } .slide input { flex:1; } .slide input:disabled { opacity:.4; }
+    .needCam { display:none; font-size:.85rem; color:var(--muted); } button:disabled + .needCam { display:inline; }
+    .basicSteps { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:12px 0 4px; }
+    .basicSteps figure { margin:0; background:var(--bg); border-radius:10px; padding:6px 0 4px; text-align:center; }
+    .basicSteps b { display:block; font-size:1.1rem; } .basicSteps figcaption { font-size:.72rem; color:var(--muted); }
+    .basicSteps svg { width:100%; max-width:70px; display:block; margin:0 auto; }
+    .counts li::marker { font-weight:700; }
+    .help h3 { margin:14px 0 0; font-size:.95rem; } .help p { margin:8px 0 0; }
+    .help ul, .help ol { margin:6px 0 0; padding-left:20px; } .help li { margin:6px 0; line-height:1.4; } .help p { line-height:1.45; }
+    .tab a { color:#7cc4ff; }
     .tipCard h3 { margin:6px 0; font-size:1.5rem; line-height:1.15; }
     .tipCard p { margin:0; color:var(--soft); }
     .pick { cursor:pointer; }
@@ -226,10 +244,10 @@
 <main id="screens" class="screens">
   <!-- Bump the version with every change so you can tell which one your phone has loaded.
        v1 camera test · v2 rhythm + recording · 2.1 get-ready pause · 2.2 stop buttons · 2.3 practice warm-up
-       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.43 full analysis shows the four summary tiles in detail (tempo per half-basic with the 1 2 3 and 5 6 7 halves, every pause, every step's timing, every basic with the count it started on), raw chart under For developers · 2.42 Results no longer goes blank after opening your newest session in History and going back · 2.41 on a phone the switch-camera button flips between front and back (main lens each side) · 2.40 swiping left from full screen leaves full screen and opens Results · 2.39 Start session and Step check buttons removed (sessions start from the hands-up menu), taps right after a swipe ignored · 2.38 phone: round camera button left of the tabs, swipe left and right through Camera, Results, History, Settings, Help · 2.37 See full analysis stays visible, with a note when an older session has none saved · 2.36 Results shows only the newest session; History opens a session in place, full analysis included (kept for the newest 30) · 2.35 Results heading reads "Last Session:" and the date · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
+       2.4 version label · 2.5 step detector + timing report + "3, 2, 1, Go!" countdowns · 2.6 tempo score · 2.7 step check · 2.8 step check ignores feet it can't see · 2.9 squats no longer count as steps · 2.10 one foot at a time + stand-still calibration · 2.11 big prompts, voice, hands-up start/stop · 2.12 one-screen layout, air-button menu, voice not cut off · 2.13 raise hands when ready to calibrate, plus/minus menu buttons · 2.14 sessions use the step check rules and calibrate first, hands prompt clears · 2.15 audio delay setting; one Calibrate switch runs stand-still plus a 16-click march before each session · 2.16 settings panel; body check before every session, audio sync on its own · 2.45 Settings in three cards (Session, Sound, Camera) with switches and a "turn the camera on first" hint, Help rewritten as short cards (set up, hands-up GUI, a session, results, not working?, salsa basic with footprints for each count) · 2.44 On the beat tile says On the beat, Dragging, Rushing or Uneven instead of X/6 · 2.43 full analysis shows the four summary tiles in detail (tempo per half-basic with the 1 2 3 and 5 6 7 halves, every pause, every step's timing, every basic with the count it started on), raw chart under For developers · 2.42 Results no longer goes blank after opening your newest session in History and going back · 2.41 on a phone the switch-camera button flips between front and back (main lens each side) · 2.40 swiping left from full screen leaves full screen and opens Results · 2.39 Start session and Step check buttons removed (sessions start from the hands-up menu), taps right after a swipe ignored · 2.38 phone: round camera button left of the tabs, swipe left and right through Camera, Results, History, Settings, Help · 2.37 See full analysis stays visible, with a note when an older session has none saved · 2.36 Results shows only the newest session; History opens a session in place, full analysis included (kept for the newest 30) · 2.35 Results heading reads "Last Session:" and the date · 2.34 History gets its own tab (score chart, sessions grouped by day, 10 at a time), Help and About merged · 2.33 "Right beat" is now "Timing", the tip moves below your typical basic and reads "Tip for Next Time:", Timing tile before On the beat · 2.32 the bottom button turns the camera on and off (red dot / X), Camera Off screen, switch-camera button when there's more than one · 2.31 two screens: camera with a record button, and menus (Results with history, Settings, Help, About) you swipe to on a phone or see beside the camera on a laptop · 2.30 the score and tip show big on the video at the end; on a phone, a Results button opens them full screen to read up close · 2.29 results summary: a Next time tip, a score out of 100, four tiles (Tempo, Pause length, On the beat, Right beat) and your typical basic; old charts under See full analysis · 2.28 spread graph always shown (no percentages when Timing can't score), hands-up Delay and Lift needed say the new value and move one step per hover · 2.27 body check once per camera start and explained, starts by itself, big 3-2-1 before the music, Start first on the hands-up menu · 2.26 no result box over the video after a session, no stray "raise both hands for the menu" between the body check and the music · 2.25 songs download when the camera starts, − and + grey out at the ends (music goes round), beat counter on the screen refresh and shifted by the audio delay · 2.24 hands-up menu: Session page (music with samples, tempo, length, Start), Settings page has delay, lift needed and sync · 2.23 Start session opens a setup screen (music, tempo, length, song samples), Settings only holds setup things, notes scheduled a little at a time · 2.22 music choice: built-in salsa band (piano and bass), rhythm only, or real songs with tracked beat times; limiter stops crackle · 2.21 plainer result messages, results not read aloud, count-in voice only says Get ready · 2.20 result split into Speed, Timing and Right beats; count-in is 5, 6, 7, 8 with a start blip on the 1 · 2.19 early and late in different colours, settings tiles are just − and + · 2.18 100 ms marks on the spread chart, air-button menu split into main and settings pages, fewer missed steps (a foot lands when the other lifts; one step per beat) · 2.17 clearer step result (early / on the beat / late, 80 ms window) with a spread chart, chart beat lines include the audio delay -->
   <section class="screen camScreen" id="camScreen" aria-label="Camera">
     <div class="stage">
-      <div class="camTop"><h1>Salsa Sync <small id="version">v2.43</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
+      <div class="camTop"><h1>Salsa Sync <small id="version">v2.45</small></h1><div id="status">Tap the button at the bottom to turn the camera on.</div></div>
 
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
@@ -346,9 +364,9 @@
     </div>
 
     <div class="tab" id="tab-settings" hidden>
-      <h2>Session</h2>
-      <p class="legend">Start on the hands-up menu uses these.</p>
-      <div id="setupDlg" class="panel">
+      <div id="setupDlg" class="card set">
+        <span class="eyebrow">Session</span>
+        <p class="legend">Used when you press Start on the hands-up GUI.</p>
         <h3>Music</h3>
         <div class="seg">
           <label><input type="radio" name="kind" value="beat"><span>Beat only</span></label>
@@ -361,7 +379,7 @@
           <div class="song"><label><input type="radio" name="song" value="vamos"> Vamos A Tocar Sonero <small>Frank Guerrero y Su Grupo Aché · 190 BPM</small></label><button data-sample="vamos" aria-label="Play a sample of Vamos A Tocar Sonero">▶</button></div>
           <div class="song"><label><input type="radio" name="song" value="mujer"> La Mujer de Antonio <small>SONGO 21 · any tempo</small></label><button data-sample="mujer" aria-label="Play a sample of La Mujer de Antonio">▶</button></div>
         </div>
-        <h3>Tempo</h3>
+        <h3>Tempo <small>BPM</small></h3>
         <div id="tempoPick" class="seg">
           <label><input type="radio" name="bpm" value="140"><span>140</span></label>
           <label><input type="radio" name="bpm" value="160"><span>160</span></label>
@@ -376,29 +394,28 @@
           <label><input type="radio" name="dur" value="60"><span>60s</span></label>
         </div>
       </div>
-      <h2>Settings</h2>
-      <div id="settingsDlg" class="panel">
-        <div class="row">
-          <label><input type="checkbox" id="voice" checked> Voice</label>
+      <div id="settingsDlg">
+        <div class="card set">
+          <span class="eyebrow">Sound</span>
+          <label class="switch"><span>Voice<small>Says the countdown and prompts out loud</small></span><input type="checkbox" id="voice" checked></label>
+          <hr class="split">
+          <h3>Audio sync</h3>
+          <p class="legend">Using Bluetooth headphones or a speaker? They play late, which makes every step look late. Sync once for each pair: march on the spot, one step per click.</p>
+          <div class="row"><button id="syncBtn" disabled>Sync now</button><span class="needCam">Turn the camera on first</span></div>
+          <label class="slide">Delay <input id="delay" type="range" min="0" max="400" step="10" value="0"> <span id="delayVal">0ms</span></label>
+          <p id="syncNote" class="legend"></p>
         </div>
-        <h3>Audio sync <small>for your headphones or speakers</small></h3>
-        <p class="legend">Bluetooth headphones and speakers play the music late, which makes every step look late. Do this once for each
-          pair of headphones or speakers, and redo it if you switch to different ones: march on the spot, one step on every click,
-          and it measures the delay.</p>
-        <div class="row">
-          <button id="syncBtn" disabled>Sync now</button>
-          <label>Delay <input id="delay" type="range" min="0" max="400" step="10" value="0"> <span id="delayVal">0ms</span></label>
+        <div class="card set">
+          <span class="eyebrow">Camera</span>
+          <h3>Body check</h3>
+          <p class="legend">Stand still for 3s so the app learns how much your camera wobbles. It runs by itself when you turn the camera on. Redo it if you move the camera.</p>
+          <div class="row"><button id="bodyBtn" disabled>Redo body check</button><span class="needCam">Turn the camera on first</span></div>
+          <p id="calibNote" class="legend"></p>
+          <hr class="split">
+          <label class="switch"><span>Set lift automatically<small>From the body check. Turn off to choose it yourself</small></span><input type="checkbox" id="autoLift" checked></label>
+          <label class="slide">Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04" disabled> <span id="liftVal">4%</span></label>
+          <p class="legend">How high a foot must lift to count as a step, as a share of your leg length. Raise it if you get extra steps, lower it if steps are missed.</p>
         </div>
-        <p id="syncNote" class="legend"></p>
-        <h3>Step sensitivity <small>for your camera and room</small></h3>
-        <p class="legend">The first time you start after turning the camera on, a 3 second body check (stand still) measures how much
-          the camera's points wobble and sets how high a foot must lift to count as a step. Redo it if you move the camera.</p>
-        <div class="row">
-          <button id="bodyBtn" disabled>Redo body check</button>
-          <label><input type="checkbox" id="autoLift" checked> Auto (body check)</label>
-          <label>Lift needed <input id="lift" type="range" min="0.01" max="0.08" step="0.005" value="0.04" disabled> <span id="liftVal">4%</span> of leg</label>
-        </div>
-        <p id="calibNote" class="legend"></p>
       </div>
       <details class="dev"><summary>For developers</summary>
         <canvas id="live" class="chart"></canvas>
@@ -406,41 +423,108 @@
       </details>
     </div>
 
-    <div class="tab" id="tab-help" hidden>
-      <h2>How to use it</h2>
-      <p>Prop your phone or laptop 2.5–3 m away, low down and tilted up, with your whole body (head to feet) in frame, the room well lit and the volume up.
-         Tap the camera button once. After that you don't need to touch it: raise both hands above your head for 2 seconds to open the menu,
-         then hold a hand over a button until it fills up. Raising both hands during a session or step check stops it.</p>
-      <p>The button at the bottom of the camera screen turns the camera on and off; with more than one camera, the button beside it switches between them (front and back on a phone).
-         Sessions start from the hands-up menu; the music, tempo and length can also be chosen in Settings.
-         On a phone, swipe left and right to move between the camera, Results, History, Settings and Help, or tap the round camera button to go straight back.</p>
-      <p>The first session after you turn the camera on starts with a body check: stand still for a few seconds
-         so the app learns how much your feet wobble when they're not moving. Redo it (in Settings) if you move the camera.
-         A session then shows a big 3, 2, 1, counts you in with "5, 6, 7, 8" blips and you dance two practice basics, starting on the green 1.
-         A second, higher "5, 6, 7, 8" means the real thing starts on the next 1, and that part is recorded.</p>
-      <p>At the end the camera screen shows your score and one tip. The Results tab has the details: four scores (Tempo, Pause length,
-         Timing, On the beat), your typical basic, which you can tap to see each score on it. The History tab has every session you've done on this device,
-         with a chart of your score over time; tap one to see its results again.</p>
-      <p>Bluetooth headphones and speakers play the music late, which makes every step look late. Run Audio sync in Settings
-         (or from the hands-up menu) once for each pair: march on the spot to 16 clicks and it measures the delay.
-         Dim light makes the camera slow down and miss steps, so turn the main light on. Filming from slightly to one side helps when your feet cross.</p>
-      <h2>Salsa basics</h2>
-      <p>Salsa grew out of Cuban son and other Afro-Caribbean music, and took its name in New York in the 1960s and 70s.
-         The music counts in eights: 1 2 3 4 5 6 7 8.</p>
-      <p>The basic step is six steps over those eight counts: step on 1, 2, 3, hold on 4, step on 5, 6, 7, hold on 8.
-         The holds are the pause this app measures. Dancing "On1" means your first step lands on the 1, which is what Salsa Sync checks.
-         ("On2" styles break on the 2 instead.)</p>
-      <p>The clave, two wooden sticks, plays the pattern the whole band locks to; the cowbell marks the beat. In the built-in Salsa band
-         you can hear both, plus conga, piano and bass.</p>
-      <h2>About Salsa Sync</h2>
-      <p>Built for the Hacktoberfest 2026 DEV Open-Source AI Challenge. Open source (MIT) at
-         <a href="https://github.com/Luke-MS-Devlin/salsa-sync">github.com/Luke-MS-Devlin/salsa-sync</a>.
-         Everything runs on your device: the video never leaves it.</p>
-      <p>Body tracking by Google's <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker">MediaPipe Pose Landmarker</a>.
-         Songs from the <a href="https://freemusicarchive.org/">Free Music Archive</a>: "Cupido" and "Vamos A Tocar Sonero" by Frank Guerrero y Su Grupo Aché
-         (<a href="https://creativecommons.org/licenses/by-nc-nd/3.0/">CC BY-NC-ND 3.0</a>, played unchanged at their own tempo) and
-         "La Mujer de Antonio" by SONGO 21 (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/">CC BY-NC-SA 3.0</a>, sped up or slowed down for each tempo).
-         Details in <a href="music/README.md">music/README.md</a>.</p>
+    <div class="tab help" id="tab-help" hidden>
+      <div class="card">
+        <span class="eyebrow">1. Set up</span>
+        <ul>
+          <li>Prop your phone or laptop 2.5–3m away, low down and tilted up.</li>
+          <li>Your whole body, head to feet, must be in frame.</li>
+          <li>Make sure you are well lit and the volume is up.</li>
+          <li>Tap the camera button once. After that you don't need to touch the screen.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="eyebrow">2. The hands-up GUI</span>
+        <p>Control the app from across the room without touching the screen.</p>
+        <h3>Open it</h3>
+        <ul>
+          <li>Stand where the camera can see your head and both hands.</li>
+          <li>Raise both hands above your head and keep them there. A 2, 1 countdown shows, then the main menu opens.</li>
+        </ul>
+        <h3>Press a button</h3>
+        <ul>
+          <li>Your wrists show as yellow rings on the screen.</li>
+          <li>Move a ring over a button and hold it still for 1.5s. The button fills up green, then presses.</li>
+          <li>To press the same button again, move your hand off and back on. The − and + for music, tempo and length keep going once a second while your hand stays there.</li>
+          <li>A greyed-out button can't go any further.</li>
+        </ul>
+        <h3>Main menu</h3>
+        <ul>
+          <li>▶ Start: starts a session with the music, tempo and length written on the button.</li>
+          <li>🎵 Change: use − and + to change the music (you hear a bit of each), tempo and length.</li>
+          <li>👣 Step check: step on the spot to test that your steps are being counted.</li>
+          <li>⚙ Settings: Delay, Lift needed, Audio sync and Body check.</li>
+          <li>✕ Close. ← Back on any page returns to the main menu.</li>
+        </ul>
+        <h3>Close or stop</h3>
+        <ul>
+          <li>It closes by itself after 20s with no hand on a button.</li>
+          <li>During a session or step check, raise both hands for 2s to stop it.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="eyebrow">3. A session</span>
+        <ol>
+          <li>Body check: stand still for 3s (only the first time after the camera turns on).</li>
+          <li>3, 2, 1, then "5, 6, 7, 8" counts you in.</li>
+          <li>Practice: two basics, starting on the green 1.</li>
+          <li>A higher "5, 6, 7, 8" means recording starts on the next 1.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <span class="eyebrow">4. Your results</span>
+        <ul>
+          <li>Tempo: are your basics the speed of the music?</li>
+          <li>Pause length: do you hold for 2 beats on the 4 and the 8?</li>
+          <li>Timing: does your basic start on the 1?</li>
+          <li>On the beat: does each step land with the beat?</li>
+        </ul>
+        <p class="legend">Tap See full analysis for every basic and step. History keeps every session on this device.</p>
+      </div>
+      <div class="card">
+        <span class="eyebrow">Not working?</span>
+        <ul>
+          <li>Steps missed or "Couldn't measure": make sure you are well lit, keep your feet in frame, redo the body check.</li>
+          <li>Every step late: run Audio sync in Settings.</li>
+          <li>A foot goes missing: film from slightly to one side so your feet don't overlap.</li>
+          <li>Hands-up GUI won't open: step back until your head and both hands are in frame.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="eyebrow">Salsa basics</span>
+        <h3>How to dance the basic step</h3>
+        <p>Salsa music counts in eights. Over 8 counts you take 6 small steps and pause twice. This is the forward and back basic, starting on the 1 ("On1"), which is what Salsa Sync checks.</p>
+        <div id="basicSteps" class="basicSteps" aria-hidden="true"></div>
+        <p class="legend">The top of each box is the way you face. <b class="l">Blue</b> is your left foot and <b class="r">red</b> is your right. The filled foot is the one your weight goes onto.</p>
+        <ol class="counts">
+          <li>Step forward with your left foot.</li>
+          <li>Rock your weight back onto your right foot. It stays where it is.</li>
+          <li>Step your left foot back, next to your right.</li>
+          <li>Pause.</li>
+          <li>Step back with your right foot.</li>
+          <li>Rock your weight forward onto your left foot. It stays where it is.</li>
+          <li>Step your right foot back, next to your left.</li>
+          <li>Pause.</li>
+        </ol>
+        <h3>Tips</h3>
+        <ul>
+          <li>Keep your steps small, about half the length of your foot.</li>
+          <li>Step on the balls of your feet and keep your knees soft.</li>
+          <li>Hold still on 4 and 8. Pause length in your results checks this.</li>
+          <li>Dancing with a partner? One of you does the mirror image: right foot back on 1, left foot forward on 5.</li>
+        </ul>
+        <p class="legend">Salsa grew out of Cuban son and took its name in New York in the 1960s and 70s. The clave plays the pattern the band locks to and the cowbell marks the beat. The Salsa band music has both.</p>
+      </div>
+      <div class="card">
+        <span class="eyebrow">About</span>
+        <p>Built for the Hacktoberfest 2026 DEV Open-Source AI Challenge. Open source (MIT) on
+           <a href="https://github.com/Luke-MS-Devlin/salsa-sync">GitHub</a>. Everything runs on your device: the video never leaves it.</p>
+        <p class="legend">Body tracking by Google's <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker">MediaPipe Pose Landmarker</a>.
+           Songs from the <a href="https://freemusicarchive.org/">Free Music Archive</a>: "Cupido" and "Vamos A Tocar Sonero" by Frank Guerrero y Su Grupo Aché
+           (<a href="https://creativecommons.org/licenses/by-nc-nd/3.0/">CC BY-NC-ND 3.0</a>, played unchanged) and
+           "La Mujer de Antonio" by SONGO 21 (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/">CC BY-NC-SA 3.0</a>, sped up or slowed down).
+           Details in <a href="music/README.md">music/README.md</a>.</p>
+      </div>
     </div>
   </section>
 </main>
@@ -833,7 +917,7 @@
       p: !T ? null : {
         good: Math.abs(T.pause - 2) <= 0.25, part: clamp01(1 - (Math.abs(T.pause - 2) - 0.25) / 0.75),     // 0 at 1 beat off
         text: Math.abs(T.pause - 2) <= 0.25 ? "Just right" : T.pause < 2 ? "Too short" : "Too long" },
-      o: !T ? null : { good: T.on === 6, part: dotPoints(T.onShare), text: `${T.on}/6 on beat` },
+      o: !T ? null : { good: T.on === 6, part: dotPoints(T.onShare), text: beatWord(T, s.bpm) },
       r: !T ? null : { good: T.shift === 0, part: dotPoints(T.rightShare),
         text: T.shift === 0 ? "In time" : `${Math.abs(T.shift)} beat${Math.abs(T.shift) > 1 ? "s" : ""} ${T.shift > 0 ? "late" : "early"}` },
     };
@@ -841,6 +925,14 @@
     const all = Object.values(tiles);
     const score = all.every(Boolean) ? Math.round(25 * all.reduce((sum, t) => sum + t.part, 0)) : null;
     return { T, bpm, band, yourBpm, yoursMs, musicMs, tiles, score, tip: nextTip(T, tiles, bpm, yourBpm, s.bpm) };
+  }
+
+  // On the beat, in a word that says what to fix: the typical step lands after the beat (dragging) or before it
+  // (rushing). If it's within the on-the-beat window but not every step is on the beat, they're spread both ways (uneven).
+  function beatWord(T, bpm) {
+    if (T.on === 6) return "On the beat";
+    const off = median(T.dots.map(p => (p - Math.round(p)) * 60000 / bpm));
+    return Math.abs(off) <= ON_TIME_MS ? "Uneven" : off > 0 ? "Dragging" : "Rushing";
   }
 
   // One tip: the first tile that isn't good, in tile order (Timing comes before On the beat: when you're a
@@ -1899,6 +1991,21 @@
     else openMenu();
     return true;
   }
+
+  // Help: footprints for each count of the basic. y is forward (-1), together (0) or back (1) for each foot;
+  // "on" is the foot your weight goes onto (none on the pauses).
+  const BASIC = [
+    { L: -1, R: 0, on: "L", say: "Left forward" }, { L: -1, R: 0, on: "R", say: "Right in place" },
+    { L: 0, R: 0, on: "L", say: "Left together" }, { L: 0, R: 0, say: "Pause" },
+    { L: 0, R: 1, on: "R", say: "Right back" },    { L: 0, R: 1, on: "L", say: "Left in place" },
+    { L: 0, R: 0, on: "R", say: "Right together" }, { L: 0, R: 0, say: "Pause" }];
+  $("basicSteps").innerHTML = BASIC.map((c, i) => {
+    const foot = (f, x) => {
+      const col = f === "L" ? "var(--left)" : "var(--right)", y = 45 + c[f] * 22, on = c.on === f;
+      return `<ellipse cx="${x}" cy="${y}" rx="7" ry="13" fill="${on ? col : "none"}" stroke="${col}" stroke-width="2" opacity="${on || !c.on ? 1 : .6}"/>`;
+    };
+    return `<figure><b>${i + 1}</b><svg viewBox="0 0 60 90">${foot("L", 21)}${foot("R", 39)}</svg><figcaption>${c.say}</figcaption></figure>`;
+  }).join("");
 
   // ---------- Air buttons: a menu you work by holding a hand over a button ----------
   // Raising both hands (when nothing is running) opens it. Your wrists are drawn as yellow rings; hold one over a
