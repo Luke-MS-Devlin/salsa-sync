@@ -183,6 +183,8 @@
     #analysisBody .cap { margin:6px 0 10px; font-size:1.05rem; line-height:1.25; }
     #analysisBody .cap small { display:block; font-size:.82rem; font-weight:400; color:var(--soft); margin-top:3px; }
     .dchart { width:100%; display:block; }
+    .gtitle { font-size:.78rem; font-weight:700; color:var(--soft); margin:4px 0 6px; }
+    .dchart rect.b7 { opacity:.5; } .dchart .sw { stroke:none; }
     .dchart line { stroke:var(--line); } .dchart text { fill:var(--muted); font-size:10px; }
     .dchart .band { fill:#2fb87722; } .dchart polyline { fill:none; stroke:var(--soft); stroke-width:1.5; }
     .dchart circle.ok { fill:var(--good); } .dchart circle.warn { fill:var(--warn); } .dchart circle.bad { fill:var(--bad); }
@@ -302,11 +304,11 @@
           <p id="noAnalysis" hidden>The full analysis wasn't saved for this session. Sessions from before version 2.36 only kept their summary;
              every session from now on keeps it.</p>
           <div id="analysisBody" class="sum">
-            <div class="card"><span class="eyebrow">Tempo · half-basic by half-basic</span><h3 class="cap" id="dTempoCap"></h3><svg id="dTempo" class="dchart" viewBox="0 0 340 130"></svg></div>
-            <div class="card"><span class="eyebrow">Pause length · every basic</span><h3 class="cap" id="dPauseCap"></h3><svg id="dPause" class="dchart" viewBox="0 0 340 130"></svg></div>
-            <div class="card"><span class="eyebrow">On the beat · every step</span><h3 class="cap" id="dOnCap"></h3>
+            <div class="card"><span class="eyebrow">Tempo · half-basic by half-basic</span><h3 class="cap" id="dTempoCap"></h3><div class="gtitle">Your speed for each half-basic (BPM)</div><svg id="dTempo" class="dchart" viewBox="0 0 340 130"></svg></div>
+            <div class="card"><span class="eyebrow">Pause length · every basic</span><h3 class="cap" id="dPauseCap"></h3><div class="gtitle">How long you paused in each basic (beats)</div><svg id="dPause" class="dchart" viewBox="0 0 340 130"></svg></div>
+            <div class="card"><span class="eyebrow">On the beat · every step</span><h3 class="cap" id="dOnCap"></h3><div class="gtitle">How early or late each step landed (ms)</div>
               <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas></div>
-            <div class="card"><span class="eyebrow">Timing · every basic</span><h3 class="cap" id="dEveryCap"></h3><div class="typ scale" id="dScale"></div><div id="dEvery"></div></div>
+            <div class="card"><span class="eyebrow">Timing · every basic</span><h3 class="cap" id="dEveryCap"></h3><div class="gtitle">Your steps in each basic, on counts 1 to 8</div><div class="typ scale" id="dScale"></div><div id="dEvery"></div></div>
             <details class="dev"><summary>For developers</summary>
           <p id="summary"></p>
           <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
@@ -1075,7 +1077,8 @@
         [lo, r.bpm, hi].map(v => `<line x1="34" x2="330" y1="${y(v)}" y2="${y(v)}"/><text x="0" y="${y(v) + 3}">${v}</text>`).join("") +
         `<polyline points="${halves.map((h, i) => `${x(i)},${y(h.bpm)}`).join(" ")}"/>` +
         halves.map((h, i) => `<circle cx="${x(i)}" cy="${y(h.bpm)}" r="3.5" class="${bpmTier(h.bpm)}${h.first ? "" : " ring"}"/>`).join("") +
-        `<text x="34" y="127">start</text><text x="182" y="127" text-anchor="middle">● 1 2 3 half   ○ 5 6 7 half</text><text x="330" y="127" text-anchor="end">end</text>`;
+        `<text x="34" y="127">start</text><text x="182" y="127" text-anchor="middle">● 1 2 3 half   ○ 5 6 7 half</text><text x="330" y="127" text-anchor="end">end</text>` +
+        `<text x="330" y="${y(r.bpm + r.band) - 4}" text-anchor="end">music ${r.bpm} BPM</text>`;
       const inBand = halves.filter(h => bpmTier(h.bpm) === "ok").length, musicHalf = 4 * P;
       const f = median(halves.filter(h => h.first).map(h => h.ms)), sec = median(halves.filter(h => !h.first).map(h => h.ms));
       const say = (ms, name) => Math.abs(ms - musicHalf) / musicHalf <= 0.04 ? "" : `your ${name} half ${ms < musicHalf ? "rushes" : "drags"}`;
@@ -1090,16 +1093,21 @@
     const pauses = basics.map((b, i) => b.dots.length !== 6 ? null : [b.dots[3] - b.dots[2],
       basics[i + 1]?.dots.length ? 8 + basics[i + 1].dots[0] - b.dots[5] : null]);
     const pTier = v => Math.abs(v - 2) <= 0.25 ? "ok" : Math.abs(v - 2) <= 0.75 ? "warn" : "bad";
-    const all = pauses.flat().filter(v => v != null), py = v => 110 - Math.min(4, v) / 4 * 100;
+    const all = pauses.flat().filter(v => v != null), py = v => 100 - Math.min(4, v) / 4 * 90;
     if (all.length) {
       const w = 296 / basics.length, bw = Math.min(14, w / 2.6);
-      $("dPause").innerHTML = [0, 2, 4].map(v => `<line x1="34" x2="330" y1="${py(v)}" y2="${py(v)}"${v === 2 ? ' class="target"' : ""}/><text x="0" y="${py(v) + 3}">${v}</text>`).join("") +
-        pauses.map((pp, i) => (pp ?? []).map((v, k) => v == null ? "" :
-          `<rect class="${pTier(v)}" x="${34 + i * w + w / 2 + (k ? 1 : -bw - 1)}" width="${bw}" y="${py(v)}" height="${110 - py(v)}" rx="2"/>`).join("") +
-          `<text x="${34 + i * w + w / 2}" y="124" text-anchor="middle">${i + 1}</text>`).join("");
+      $("dPause").viewBox.baseVal.height = 150;
+      $("dPause").innerHTML = [0, 1, 2, 3, 4].map(v => `<line x1="34" x2="330" y1="${py(v)}" y2="${py(v)}"${v === 2 ? ' class="target"' : ""}/><text x="0" y="${py(v) + 3}">${v}</text>`).join("") +
+        `<text x="330" y="${py(2) - 4}" text-anchor="end">aim: 2 beats</text>` +
+        pauses.map((pp, i) => (pp ? "" : `<text x="${34 + i * w + w / 2}" y="${py(0) - 4}" text-anchor="middle">?</text>`) + (pp ?? []).map((v, k) => v == null ? "" :
+          `<rect class="${pTier(v)}${k ? " b7" : ""}" x="${34 + i * w + w / 2 + (k ? 1 : -bw - 1)}" width="${bw}" y="${py(v)}" height="${100 - py(v)}" rx="2"/>`).join("") +
+          `<text x="${34 + i * w + w / 2}" y="113" text-anchor="middle">${i + 1}</text>`).join("") +
+        `<text x="182" y="127" text-anchor="middle">Basic</text>` +
+        `<rect class="sw" x="80" y="137" width="10" height="10" rx="2" fill="var(--soft)"/><text x="95" y="146">pause after 3</text>` +
+        `<rect class="sw" x="190" y="137" width="10" height="10" rx="2" fill="var(--soft)" opacity=".5"/><text x="205" y="146">pause after 7</text>`;
       const good = all.filter(v => pTier(v) === "ok").length, avg = k => median(pauses.filter(Boolean).map(pp => pp[k]));
       $("dPauseCap").innerHTML = `${good} of ${all.length} pauses just right` +
-        `<small>Each basic has two bars: the pause after 3, then after 7. Each should last two beats (dashed line). Typical: ${avg(0)?.toFixed(1)} and ${avg(1)?.toFixed(1) ?? "–"} beats.</small>`;
+        `<small>You should hold still for two beats after step 3 and after step 7. Each basic has two bars, one per pause: the taller the bar, the longer you held. A bar on the dashed line is just right; "?" means that basic had missing or extra steps. Typically you held ${avg(0)?.toFixed(1)} beats after 3 and ${avg(1)?.toFixed(1) ?? "–"} after 7.</small>`;
     } else { $("dPause").innerHTML = ""; $("dPauseCap").innerHTML = `Couldn't measure<small>Needs basics with 6 steps.</small>`; }
     // On the beat: every step, by how early or late it landed.
     const off = median(s.steps.map(st => st.offset));
