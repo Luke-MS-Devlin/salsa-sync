@@ -184,6 +184,13 @@
     #analysisBody .cap small { display:block; font-size:.82rem; font-weight:400; color:var(--soft); margin-top:3px; }
     .dchart { width:100%; display:block; }
     hr.split { border:0; border-top:1px solid var(--line); margin:16px 0 12px; }
+    .prow { display:grid; grid-template-columns:22px 1fr 1fr; gap:10px; align-items:center; margin:5px 0; font-size:.72rem; color:var(--muted); }
+    .prow.head { font-weight:700; color:var(--soft); } .prow > b { text-align:right; } .pq { text-align:center; }
+    .pslot { position:relative; height:16px; }
+    .pslot::before { content:""; position:absolute; left:0; top:0; bottom:0; width:75%; border:1.5px dashed var(--ghost); border-radius:5px; box-sizing:border-box; }
+    .pslot i { position:absolute; left:0; top:2px; bottom:2px; border-radius:3px; }
+    .pslot i.ok { background:var(--good); } .pslot i.warn { background:var(--warn); } .pslot i.bad { background:var(--bad); }
+    .pslot em { position:absolute; right:0; top:0; font-style:normal; font-size:.7rem; color:var(--fg); line-height:16px; }
     .gtitle { font-size:.78rem; font-weight:700; color:var(--soft); margin:4px 0 6px; }
     .dchart rect.b7 { opacity:.5; } .dchart .sw { stroke:none; }
     .dchart line { stroke:var(--line); } .dchart text { fill:var(--muted); font-size:10px; }
@@ -308,7 +315,7 @@
           <div id="analysisBody" class="sum">
             <div class="card"><span class="eyebrow">Tempo</span><h3 class="cap" id="dBasicCap"></h3><div class="gtitle">Your tempo for each basic was:</div><svg id="dBasic" class="dchart" viewBox="0 0 340 140"></svg>
               <hr class="split"><span class="eyebrow">123 and 567</span><h3 class="cap" id="dTempoCap"></h3><div class="gtitle">Your tempo for each half basic was:</div><svg id="dTempo" class="dchart" viewBox="0 0 340 156"></svg></div>
-            <div class="card"><span class="eyebrow">Pause length · every basic</span><h3 class="cap" id="dPauseCap"></h3><div class="gtitle">How long you paused in each basic (beats)</div><svg id="dPause" class="dchart" viewBox="0 0 340 130"></svg></div>
+            <div class="card"><span class="eyebrow">Pause length</span><h3 class="cap" id="dPauseCap"></h3><div class="gtitle">How much of each 2-beat pause you held:</div><div id="dPause"></div></div>
             <div class="card"><span class="eyebrow">On the beat · every step</span><h3 class="cap" id="dOnCap"></h3><div class="gtitle">How early or late each step landed (ms)</div>
               <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas></div>
             <div class="card"><span class="eyebrow">Timing · every basic</span><h3 class="cap" id="dEveryCap"></h3><div class="gtitle">Your steps in each basic, on counts 1 to 8</div><div class="typ scale" id="dScale"></div><div id="dEvery"></div></div>
@@ -1118,26 +1125,24 @@
     }
     $("dTempoCap").innerHTML = head + `<small>The music's tempo of ${r.bpm} BPM gives a half basic time of ${(musicHalf / 1000).toFixed(2)}s.` +
       (f && sec ? ` Your 123 took ${(f / 1000).toFixed(2)}s (${asBpm(f)} BPM), and your 567 took ${(sec / 1000).toFixed(2)}s (${asBpm(sec)} BPM).` : "") + tip + `</small>`;
-    // Pause: for every basic with 6 steps, the pause after 3 and the pause after 7 (up to the next basic's first step).
-    // Two bars per basic, the dashed line at 2 beats.
+    // Pause: for every basic with 6 steps, the pause on the 4th beat (after step 3) and on the 8th (after step 7, up to
+    // the next basic's first step). Each is a dashed box the length of a 2-beat pause, filled as far as you held it:
+    // a full box is just right, and a pause that's too long runs past the end of the box.
     const pauses = basics.map((b, i) => b.dots.length !== 6 ? null : [b.dots[3] - b.dots[2],
       basics[i + 1]?.dots.length ? 8 + basics[i + 1].dots[0] - b.dots[5] : null]);
     const pTier = v => Math.abs(v - 2) <= 0.25 ? "ok" : Math.abs(v - 2) <= 0.75 ? "warn" : "bad";
-    const all = pauses.flat().filter(v => v != null), py = v => 100 - Math.min(4, v) / 4 * 90;
+    const all = pauses.flat().filter(v => v != null);
     if (all.length) {
-      const w = 296 / basics.length, bw = Math.min(14, w / 2.6);
-      $("dPause").viewBox.baseVal.height = 150;
-      $("dPause").innerHTML = [0, 1, 2, 3, 4].map(v => `<line x1="34" x2="330" y1="${py(v)}" y2="${py(v)}"${v === 2 ? ' class="target"' : ""}/><text x="0" y="${py(v) + 3}">${v}</text>`).join("") +
-        `<text x="330" y="${py(2) - 4}" text-anchor="end">aim: 2 beats</text>` +
-        pauses.map((pp, i) => (pp ? "" : `<text x="${34 + i * w + w / 2}" y="${py(0) - 4}" text-anchor="middle">?</text>`) + (pp ?? []).map((v, k) => v == null ? "" :
-          `<rect class="${pTier(v)}${k ? " b7" : ""}" x="${34 + i * w + w / 2 + (k ? 1 : -bw - 1)}" width="${bw}" y="${py(v)}" height="${100 - py(v)}" rx="2"/>`).join("") +
-          `<text x="${34 + i * w + w / 2}" y="113" text-anchor="middle">${i + 1}</text>`).join("") +
-        `<text x="182" y="127" text-anchor="middle">Basic</text>` +
-        `<rect class="sw" x="80" y="137" width="10" height="10" rx="2" fill="var(--soft)"/><text x="95" y="146">pause after 3</text>` +
-        `<rect class="sw" x="190" y="137" width="10" height="10" rx="2" fill="var(--soft)" opacity=".5"/><text x="205" y="146">pause after 7</text>`;
-      const good = all.filter(v => pTier(v) === "ok").length, avg = k => median(pauses.filter(Boolean).map(pp => pp[k]));
-      $("dPauseCap").innerHTML = `${good} of ${all.length} pauses just right` +
-        `<small>You should hold still for two beats after step 3 and after step 7. Each basic has two bars, one per pause: the taller the bar, the longer you held. A bar on the dashed line is just right; "?" means that basic had missing or extra steps. Typically you held ${avg(0)?.toFixed(1)} beats after 3 and ${avg(1)?.toFixed(1) ?? "–"} after 7.</small>`;
+      const cell = v => v == null ? `<span class="pq">?</span>` :
+        `<div class="pslot"><i class="${pTier(v)}" style="width:${Math.min(100, v / 2 * 75)}%"></i><em>${v.toFixed(1)}</em></div>`;
+      $("dPause").innerHTML = `<div class="prow head"><span></span><span>4th beat</span><span>8th beat</span></div>` +
+        pauses.map((pp, i) => `<div class="prow"><b>${i + 1}</b>${cell(pp?.[0])}${cell(pp?.[1])}</div>`).join("");
+      const avg = k => median(pauses.filter(Boolean).map(pp => pp[k]));
+      const word = v => v == null ? null : Math.abs(v - 2) <= 0.25 ? "just right" : v < 2 ? "too short" : "too long";
+      const w4 = word(avg(0)), w8 = word(avg(1));
+      $("dPauseCap").innerHTML = (!w8 || w4 === w8 ? `${w8 ? "Both pauses are" : "Your pause is"} ${w4}` : `Your 4th-beat pause is ${w4}, your 8th-beat pause is ${w8}`) +
+        `<small>Each dashed box is a 2-beat pause. Fill the box to hold for the full 2 beats. Your pause on the 4th beat was typically ` +
+        `${avg(0).toFixed(1)} beats${avg(1) != null ? `, and on the 8th, ${avg(1).toFixed(1)} beats` : ""}. "?" means that basic had missing or extra steps.</small>`;
     } else { $("dPause").innerHTML = ""; $("dPauseCap").innerHTML = `Couldn't measure<small>Needs basics with 6 steps.</small>`; }
     // On the beat: every step, by how early or late it landed.
     const off = median(s.steps.map(st => st.offset));
