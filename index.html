@@ -320,7 +320,7 @@
             <div class="card"><span class="eyebrow">Pause length</span><h3 class="cap" id="dPauseCap"></h3><div class="gtitle">How much of each 2-beat pause you held:</div><div id="dPause"></div></div>
             <div class="card"><span class="eyebrow">On the beat</span><h3 class="cap" id="dOnCap"></h3><div class="gtitle">How early or late each step landed (ms)</div>
               <canvas id="spreadChart" class="spread" aria-label="How your steps spread around the beat"></canvas></div>
-            <div class="card"><span class="eyebrow">Timing · every basic</span><h3 class="cap" id="dEveryCap"></h3><div class="gtitle">Your steps in each basic, on counts 1 to 8</div><div class="typ scale" id="dScale"></div><div id="dEvery"></div></div>
+            <div class="card"><span class="eyebrow">Timing</span><h3 class="cap" id="dEveryCap"></h3><div class="gtitle">Your steps in each basic, on counts 1 to 8</div><div class="typ scale" id="dScale"></div><div id="dEvery"></div></div>
             <details class="dev"><summary>For developers</summary>
           <p id="summary"></p>
           <div class="scroll"><canvas id="sessionChart" class="chart"></canvas></div>
@@ -1173,8 +1173,13 @@
       b.dots.map((p, j) => p >= LO && p < HI ? `<span class="s ${stepTier(nearMs(p, P))}" style="left:${X(p)}%">${b.feet[j]}</span>` : "").join("") +
       `</div><em class="${shiftLabel(shifts[i])[0]}">${shiftLabel(shifts[i])[1]}</em></div>`).join("");
     const onOne = shifts.filter(v => v === 0).length;
-    $("dEveryCap").innerHTML = basics.length ? `${onOne} of ${basics.length} basics started on the 1<small>One row per basic. Each step is green within ${ON_TIME_MS}ms of a beat, amber within ${2 * ON_TIME_MS}ms, red further off. Dashed circles are where steps should go; "?" means missing or extra steps.</small>`
-      : `No whole basics<small>Basics are cut from the first 1 after the count-in, 8 beats each.</small>`;
+    // Headline: how many beats out your basics typically are (the typical basic's shift, else the middle of the rows).
+    const typShift = T ? T.shift : median(shifts);
+    const beatsOut = v => `${Math.abs(v)} beat${Math.abs(v) === 1 ? "" : "s"} ${v > 0 ? "late" : "early"}`;
+    $("dEveryCap").innerHTML = !basics.length ? `No whole basics<small>Basics are cut from the first 1 after the count-in, 8 beats each.</small>`
+      : (typShift == null ? "Couldn't tell your timing" : typShift === 0 ? "You are typically on time" : `You are typically ${beatsOut(typShift)}`) +
+        `<small>${onOne} of ${basics.length} basics started on the 1. Each row is one basic, and the dashed circles are where your steps should land. ` +
+        (typShift == null ? `"?" means missing or extra steps.` : typShift === 0 ? "Keep it up!" : `Try starting your basic ${beatsOut(typShift).replace(/late$/, "earlier").replace(/early$/, "later")}.`) + `</small>`;
   }
 
   // ---------- Charts ----------
