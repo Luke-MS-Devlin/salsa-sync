@@ -230,7 +230,7 @@
       <div id="prompt" class="prompt"></div>
       <div id="menu" class="menu" hidden>
         <div class="menuTitle" id="menuTitle">Hold a hand over a button</div>
-        <button class="tile left main" data-page="main" data-act="start">▶ Start <b id="tSession">Salsa band · 160 · 30 s</b></button>
+        <button class="tile left main" data-page="main" data-act="start">▶ Start <b id="tSession">Salsa band · 160 · 30s</b></button>
         <button class="tile right" data-page="main" data-act="session">🎵 Change <b>music, tempo, length</b></button>
         <button class="tile left" data-page="main" data-act="check">👣 Step check</button>
         <button class="tile right" data-page="main" data-act="settings">⚙ Settings</button>
@@ -243,13 +243,13 @@
         <div class="menuLabel" data-page="session">Tempo<b id="tTempo">160</b></div>
         <button class="tile right big" data-page="session" data-act="tempo+" aria-label="Tempo up">+</button>
         <button class="tile left big" data-page="session" data-act="length-" aria-label="Length down">−</button>
-        <div class="menuLabel" data-page="session">Length<b id="tLen">30 s</b></div>
+        <div class="menuLabel" data-page="session">Length<b id="tLen">30s</b></div>
         <button class="tile right big" data-page="session" data-act="length+" aria-label="Length up">+</button>
         <button class="tile left main" data-page="session" data-act="start">▶ Start</button>
         <button class="tile right" data-page="session" data-act="back">← Back</button>
         <!-- Settings page: setup things only. -->
         <button class="tile left big" data-page="settings" data-act="delay-" aria-label="Delay down">−</button>
-        <div class="menuLabel" data-page="settings">Delay<b id="tDelay">0 ms</b></div>
+        <div class="menuLabel" data-page="settings">Delay<b id="tDelay">0ms</b></div>
         <button class="tile right big" data-page="settings" data-act="delay+" aria-label="Delay up">+</button>
         <button class="tile left big" data-page="settings" data-act="sens-" aria-label="Sensitivity down">−</button>
         <div class="menuLabel" data-page="settings">Lift needed<b id="tSens">Auto</b></div>
@@ -362,9 +362,9 @@
         <p id="songTempo" class="legend" hidden></p>
         <h3>Length</h3>
         <div class="seg">
-          <label><input type="radio" name="dur" value="20"><span>20 s</span></label>
-          <label><input type="radio" name="dur" value="30"><span>30 s</span></label>
-          <label><input type="radio" name="dur" value="60"><span>60 s</span></label>
+          <label><input type="radio" name="dur" value="20"><span>20s</span></label>
+          <label><input type="radio" name="dur" value="30"><span>30s</span></label>
+          <label><input type="radio" name="dur" value="60"><span>60s</span></label>
         </div>
       </div>
       <h2>Settings</h2>
@@ -378,7 +378,7 @@
           and it measures the delay.</p>
         <div class="row">
           <button id="syncBtn" disabled>Sync now</button>
-          <label>Delay <input id="delay" type="range" min="0" max="400" step="10" value="0"> <span id="delayVal">0 ms</span></label>
+          <label>Delay <input id="delay" type="range" min="0" max="400" step="10" value="0"> <span id="delayVal">0ms</span></label>
         </div>
         <p id="syncNote" class="legend"></p>
         <h3>Step sensitivity <small>for your camera and room</small></h3>
@@ -393,7 +393,7 @@
       </div>
       <details class="dev"><summary>For developers</summary>
         <canvas id="live" class="chart"></canvas>
-        <div id="liveLegend" class="legend">Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.</div>
+        <div id="liveLegend" class="legend">Live ankle height (last 5s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.</div>
       </details>
     </div>
 
@@ -858,7 +858,7 @@
     if (mode === "t") {   // two bars on the same scale: the music's basic and yours, a tick on each beat
       if (!r.yoursMs) return `<p>I couldn't measure how long your basic took.</p>`;
       const ticks = [...Array(9).keys()].map(i => `<i style="left:${i / 8 * 100}%"></i>`).join("");
-      const bar = (label, ms, cls) => `<div class="tbar"><span>${label}</span><div><b class="${cls}" style="width:${Math.min(100, ms / r.musicMs * 80)}%">${ticks}</b></div><em>${(ms / 1000).toFixed(2)} s</em></div>`;
+      const bar = (label, ms, cls) => `<div class="tbar"><span>${label}</span><div><b class="${cls}" style="width:${Math.min(100, ms / r.musicMs * 80)}%">${ticks}</b></div><em>${(ms / 1000).toFixed(2)}s</em></div>`;
       return bar("Music", r.musicMs, "") + bar("You", r.yoursMs, r.tiles.t.light);
     }
     const zones = [3, 7].map(p => `<span class="zone" style="left:${X(p - 0.5)}%;width:${X(p + 0.5) - X(p - 0.5)}%"></span>`).join("");
@@ -951,7 +951,7 @@
   try { history = JSON.parse(localStorage.getItem("history")) || []; } catch {}
   const MUSIC_NAMES = { beat: "Beat only", band: "Salsa band" };
   function saveToHistory(s) {
-    history.unshift({ at: Date.now(), label: `${s.song ?? MUSIC_NAMES[s.music] ?? s.music ?? "Session"} · ${Math.round(s.bpm)} BPM · ${Math.round((s.endPerf - s.startPerf) / 1000)} s`,
+    history.unshift({ at: Date.now(), label: `${s.song ?? MUSIC_NAMES[s.music] ?? s.music ?? "Session"} · ${Math.round(s.bpm)} BPM · ${Math.round((s.endPerf - s.startPerf) / 1000)}s`,
                       summary: s.summary, analysis: analysisOf(s) });
     history.length = Math.min(history.length, 100);
     history.forEach((h, i) => { if (i >= KEEP_ANALYSIS) delete h.analysis; });
@@ -1098,8 +1098,8 @@
     const overall = !r.tiles.t ? null : r.tiles.t.good ? word.true : r.yourBpm > r.bpm ? word.fast : word.slow;
     tempoChart($("dBasic"), fulls, false);
     $("dBasicCap").innerHTML = !overall ? `Couldn't measure your basics<small>Each basic needs three steps, a pause, three steps and a pause.</small>`
-      : `Your basics are ${overall}<small>The music's tempo of ${r.bpm} BPM gives a basic time of ${(8 * P / 1000).toFixed(2)} s. Your typical basic took ` +
-        `${(r.yoursMs / 1000).toFixed(2)} s, which is ${r.yourBpm} BPM.${fulls.length ? ` ${fulls.filter(f => bpmTier(f.bpm) === "ok").length} of ${fulls.length} basics had the correct tempo.` : ""}</small>`;
+      : `Your basics are ${overall}<small>The music's tempo of ${r.bpm} BPM gives a basic time of ${(8 * P / 1000).toFixed(2)}s. Your typical basic took ` +
+        `${(r.yoursMs / 1000).toFixed(2)}s, which is ${r.yourBpm} BPM.${fulls.length ? ` ${fulls.filter(f => bpmTier(f.bpm) === "ok").length} of ${fulls.length} basics had the correct tempo.` : ""}</small>`;
     // 123 and 567: each half's typical time as BPM, judged with the same green band.
     tempoChart($("dTempo"), halves, true);
     const musicHalf = 4 * P, typ = first => median(halves.filter(h => h.first === first).map(h => h.ms));
@@ -1116,8 +1116,8 @@
         head = `Your ${which[0]} is ${verb(which[1])}`; tip = ` ${fix(which[1])} your ${which[0]}.`;
       }
     }
-    $("dTempoCap").innerHTML = head + `<small>The music's tempo of ${r.bpm} BPM gives a half basic time of ${(musicHalf / 1000).toFixed(2)} s.` +
-      (f && sec ? ` Your 123 took ${(f / 1000).toFixed(2)} s (${asBpm(f)} BPM), and your 567 took ${(sec / 1000).toFixed(2)} s (${asBpm(sec)} BPM).` : "") + tip + `</small>`;
+    $("dTempoCap").innerHTML = head + `<small>The music's tempo of ${r.bpm} BPM gives a half basic time of ${(musicHalf / 1000).toFixed(2)}s.` +
+      (f && sec ? ` Your 123 took ${(f / 1000).toFixed(2)}s (${asBpm(f)} BPM), and your 567 took ${(sec / 1000).toFixed(2)}s (${asBpm(sec)} BPM).` : "") + tip + `</small>`;
     // Pause: for every basic with 6 steps, the pause after 3 and the pause after 7 (up to the next basic's first step).
     // Two bars per basic, the dashed line at 2 beats.
     const pauses = basics.map((b, i) => b.dots.length !== 6 ? null : [b.dots[3] - b.dots[2],
@@ -1141,8 +1141,8 @@
     } else { $("dPause").innerHTML = ""; $("dPauseCap").innerHTML = `Couldn't measure<small>Needs basics with 6 steps.</small>`; }
     // On the beat: every step, by how early or late it landed.
     const off = median(s.steps.map(st => st.offset));
-    $("dOnCap").innerHTML = off == null ? "No steps" : `${Math.abs(off) <= 20 ? "Your steps land right on the beat" : `Most steps land about ${Math.round(Math.abs(off) / 10) * 10} ms ${off > 0 ? "late" : "early"}`}` +
-      `<small>Every step, by how far it was from the nearest beat. On the beat is within ${ON_TIME_MS} ms.</small>`;
+    $("dOnCap").innerHTML = off == null ? "No steps" : `${Math.abs(off) <= 20 ? "Your steps land right on the beat" : `Most steps land about ${Math.round(Math.abs(off) / 10) * 10}ms ${off > 0 ? "late" : "early"}`}` +
+      `<small>Every step, by how far it was from the nearest beat. On the beat is within ${ON_TIME_MS}ms.</small>`;
     // Every basic: one row each, the same strip as the typical basic, each step coloured by how close it was to a beat.
     $("dScale").innerHTML = $("typScale").innerHTML;
     const zones = [3, 7].map(p => `<span class="zone" style="left:${X(p - 0.5)}%;width:${X(p + 0.5) - X(p - 0.5)}%"></span>`).join("");
@@ -1154,7 +1154,7 @@
       b.dots.map((p, j) => p >= LO && p < HI ? `<span class="s ${stepTier(nearMs(p, P))}" style="left:${X(p)}%">${b.feet[j]}</span>` : "").join("") +
       `</div><em class="${shiftLabel(shifts[i])[0]}">${shiftLabel(shifts[i])[1]}</em></div>`).join("");
     const onOne = shifts.filter(v => v === 0).length;
-    $("dEveryCap").innerHTML = basics.length ? `${onOne} of ${basics.length} basics started on the 1<small>One row per basic. Each step is green within ${ON_TIME_MS} ms of a beat, amber within ${2 * ON_TIME_MS} ms, red further off. Dashed circles are where steps should go; "?" means missing or extra steps.</small>`
+    $("dEveryCap").innerHTML = basics.length ? `${onOne} of ${basics.length} basics started on the 1<small>One row per basic. Each step is green within ${ON_TIME_MS}ms of a beat, amber within ${2 * ON_TIME_MS}ms, red further off. Dashed circles are where steps should go; "?" means missing or extra steps.</small>`
       : `No whole basics<small>Basics are cut from the first 1 after the count-in, 8 beats each.</small>`;
   }
 
@@ -1441,7 +1441,7 @@
   try { audioDelay = Number(localStorage.getItem("audioDelayMs")) || 0; } catch {}
   function setDelay(ms) {
     audioDelay = Math.max(0, Math.min(400, Math.round(ms / 10) * 10));
-    $("delay").value = audioDelay; $("delayVal").textContent = `${audioDelay} ms`;
+    $("delay").value = audioDelay; $("delayVal").textContent = `${audioDelay}ms`;
     try { localStorage.setItem("audioDelayMs", audioDelay); } catch {}
   }
   setDelay(audioDelay);
@@ -1464,13 +1464,13 @@
     const at = q => offsets[Math.floor(q * (offsets.length - 1))];
     let note;
     let ok = false;
-    if (offsets.length < SYNC_BEATS / 2) note = `Audio sync didn't work: I couldn't see enough of your steps. The delay stays at ${audioDelay} ms. Try again with both feet in view.`;
-    else if (at(0.75) - at(0.25) > 160) note = `Audio sync didn't work: your steps weren't steady enough to measure. The delay stays at ${audioDelay} ms. Try again, stepping exactly with each click.`;
-    else { setDelay(Math.max(0, at(0.5))); ok = true; note = `Audio sync done. Sound reaches you about ${audioDelay} ms late on this device, and I'll allow for that.`; }
+    if (offsets.length < SYNC_BEATS / 2) note = `Audio sync didn't work: I couldn't see enough of your steps. The delay stays at ${audioDelay}ms. Try again with both feet in view.`;
+    else if (at(0.75) - at(0.25) > 160) note = `Audio sync didn't work: your steps weren't steady enough to measure. The delay stays at ${audioDelay}ms. Try again, stepping exactly with each click.`;
+    else { setDelay(Math.max(0, at(0.5))); ok = true; note = `Audio sync done. Sound reaches you about ${audioDelay}ms late on this device, and I'll allow for that.`; }
     $("syncNote").textContent = note;
     updateTiles();
     showPrompt(ok ? "Synced" : "Sync didn't work", ok ? "green" : "red",
-      { sub: ok ? `delay ${audioDelay} ms · redo if you switch headphones or speakers` : "try again with both feet in view",
+      { sub: ok ? `delay ${audioDelay}ms · redo if you switch headphones or speakers` : "try again with both feet in view",
         say: ok ? `Synced. Sound reaches you ${audioDelay} milliseconds late. Redo this if you switch headphones or speakers.`
                 : "Sync didn't work. Try again, one step on every click.", important: true, hideAfter: 6000 });
   }
@@ -1695,7 +1695,7 @@
     else $("calibNote").textContent = "";
     checking = true; feetWereLost = false;
     $("feet").hidden = !!forSession; updateFeet();
-    $("liveLegend").innerHTML = `Live lift off the floor (last 5 s): <b class="l">left</b> and <b class="r">right</b>.
+    $("liveLegend").innerHTML = `Live lift off the floor (last 5s): <b class="l">left</b> and <b class="r">right</b>.
       The dashed line is the lift needed to count as a step. Each landing flashes L or R and beeps.`;
   }
 
@@ -1705,7 +1705,7 @@
     const n = feet.left.count + feet.right.count;
     if (!quiet) showPrompt("Stopped", "", { sub: `L ${feet.left.count} · R ${feet.right.count}`, say: `Stopped. ${n} steps.`, important: true, hideAfter: 4000 });
     $("feet").hidden = true;
-    $("liveLegend").innerHTML = `Live ankle height (last 5 s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.`;
+    $("liveLegend").innerHTML = `Live ankle height (last 5s): <b class="l">left</b> and <b class="r">right</b>. Higher line = foot lifted.`;
   }
 
   function checkFrame(lm, t, feetVisible) {
@@ -1904,11 +1904,11 @@
     hover = { tile: null, since: 0, fired: false };
   }
   function updateTiles() {
-    $("tSession").textContent = `${musicName()} · ${chosenBpm()} · ${choice.dur} s`;
+    $("tSession").textContent = `${musicName()} · ${chosenBpm()} · ${choice.dur}s`;
     $("tMusic").textContent = musicName();
     $("tTempo").textContent = SONG_BPM[choice.music] ? `${chosenBpm()} (song)` : chosenBpm();
-    $("tLen").textContent = `${choice.dur} s`;
-    $("tDelay").textContent = `${audioDelay} ms`;
+    $("tLen").textContent = `${choice.dur}s`;
+    $("tDelay").textContent = `${audioDelay}ms`;
     $("tSens").textContent = autoLift() ? "Auto" : `${Math.round(minLift * 100)}%`;
     // Grey out a − or + that can't go any further. (Music has no ends: it goes round.)
     const sens = autoLift() ? "auto" : Math.round(minLift * 100) / 100, fixed = !!SONG_BPM[choice.music];
