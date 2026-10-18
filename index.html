@@ -192,6 +192,7 @@
     .dchart circle.ring.ok { stroke:var(--good); } .dchart circle.ring.warn { stroke:var(--warn); } .dchart circle.ring.bad { stroke:var(--bad); }
     .dchart rect.ok { fill:var(--good); } .dchart rect.warn { fill:var(--warn); } .dchart rect.bad { fill:var(--bad); }
     .dchart .target { stroke:var(--fg); stroke-dasharray:4 3; }
+    .dchart .music { stroke:var(--soft); stroke-width:1.5; stroke-dasharray:4 3; }
     .brow { display:grid; grid-template-columns:22px 1fr 48px; align-items:center; }
     .brow > em { font-style:normal; font-size:.68rem; font-weight:700; text-align:right; color:var(--muted); }
     .brow > em.ok { color:var(--good); } .brow > em.warn { color:var(--warn); } .brow > em.bad { color:var(--bad); }
@@ -1078,10 +1079,11 @@
       const every = secs <= 40 ? 5 : secs <= 90 ? 10 : 30;
       svg.innerHTML = `<rect class="band" x="34" width="296" y="${y(r.bpm + r.band)}" height="${y(r.bpm - r.band) - y(r.bpm + r.band)}"/>` +
         Array.from({ length: Math.floor(hi / 10) - Math.ceil(lo / 10) + 1 }, (_, i) => (Math.ceil(lo / 10) + i) * 10)   // a line every 10 BPM
-          .map(v => `<line x1="34" x2="330" y1="${y(v)}" y2="${y(v)}"/><text x="0" y="${y(v) + 3}">${v}</text>`).join("") +
+          .map(v => `<line x1="34" x2="330" y1="${y(v)}" y2="${y(v)}"/><text x="12" y="${y(v) + 3}">${v}</text>`).join("") +
+        `<text transform="translate(7 ${y(r.bpm)}) rotate(-90)" text-anchor="middle">BPM</text>` +
         `<polyline points="${halves.map((h, i) => `${x(i)},${y(h.bpm)}`).join(" ")}"/>` +
         halves.map((h, i) => `<circle cx="${x(i)}" cy="${y(h.bpm)}" r="3.5" class="${bpmTier(h.bpm)}${h.first ? "" : " ring"}"/>`).join("") +
-        `<line class="target" x1="34" x2="330" y1="${y(r.bpm)}" y2="${y(r.bpm)}"/>` +                     // the music's tempo
+        `<line class="music" x1="34" x2="330" y1="${y(r.bpm)}" y2="${y(r.bpm)}"/>` +                     // the music's tempo
         Array.from({ length: Math.floor(secs / every) + 1 }, (_, i) => i * every)
           .map(v => `<text x="${tx(v)}" y="123" text-anchor="middle">${v}</text>`).join("") +
         `<text x="182" y="136" text-anchor="middle">Time (seconds)</text>` +
