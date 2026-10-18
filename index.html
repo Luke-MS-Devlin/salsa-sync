@@ -1144,7 +1144,7 @@
       function pauseAdvice(p4, p8) {
         const way = v => v == null || Math.abs(v - 2) <= 0.25 ? null : v < 2 ? "longer" : "shorter", a4 = way(p4), a8 = way(p8);
         if (!a4 && !a8) return "";
-        if (a4 && a8) return a4 === a8 ? ` You should pause ${a4} on both pauses.` : ` You should pause longer on the ${a4 === "longer" ? "4th" : "8th"} beat and shorter on the ${a4 === "longer" ? "8th" : "4th"} beat.`;
+        if (a4 && a8) return a4 === a8 ? ` You should pause ${a4} on both.` : ` You should pause longer on the ${a4 === "longer" ? "4th" : "8th"} beat and shorter on the ${a4 === "longer" ? "8th" : "4th"} beat.`;
         return ` You should pause ${a4 || a8} on the ${a4 ? "4th" : "8th"} beat.`;
       }
       $("dPauseCap").innerHTML = (!w8 || w4 === w8 ? `${w8 ? "Both pauses are" : "Your pause is"} ${w4}` : `Your 4th-beat pause is ${w4}, your 8th-beat pause is ${w8}`) +
