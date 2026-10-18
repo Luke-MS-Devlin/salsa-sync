@@ -1152,12 +1152,12 @@
       $("dPauseCap").innerHTML = (!w8 || w4 === w8 ? `${w8 ? "Both pauses are" : "Your pause is"} ${w4}` : `Your 4th-beat pause is ${w4}, your 8th-beat pause is ${w8}`) +
         `<small>Each pause should be around 2 beats. Your typical pause was ${avg(0).toFixed(1)} beats on the 4th beat` +
         (avg(1) != null ? `, and was ${avg(1).toFixed(1)} beats on the 8th beat.` : ".") + pauseAdvice(avg(0), avg(1)) + `</small>`;
-    } else { $("dPause").innerHTML = ""; $("dPauseCap").innerHTML = `Couldn't measure<small>Needs basics with 6 steps.</small>`; }
+    } else { $("dPause").innerHTML = ""; $("dPauseCap").innerHTML = `Couldn't measure your pauses<small>Steps weren't detected properly. Try again or refer to the help section.</small>`; }
     // On the beat: every step, by how early or late it landed. The headline follows the middle (median) step: within
     // the on-the-beat window is "on the beat", otherwise most steps are dragging (late) or rushing (early).
     const off = median(s.steps.map(st => st.offset)), n = s.steps.length || 1;
     const pct = test => Math.round(100 * s.steps.filter(st => test(st.offset)).length / n);
-    const onPct = pct(o => Math.abs(o) <= ON_TIME_MS), earlyPct = pct(o => o < -ON_TIME_MS), latePct = pct(o => o > ON_TIME_MS);
+    const onPct = pct(o => Math.abs(o) <= ON_TIME_MS), earlyPct = pct(o => o < -ON_TIME_MS), latePct = 100 - onPct - earlyPct;   // the rest, so they add to 100
     const onBeat = off != null && Math.abs(off) <= ON_TIME_MS;
     $("dOnCap").innerHTML = off == null ? "No steps" : (onBeat ? "You are on the beat" : `Most steps are ${off > 0 ? "dragging" : "rushing"}`) +
       `<small>${onPct}% of your steps were on the beat. ${earlyPct}% were too early and ${latePct}% were too late. ` +
