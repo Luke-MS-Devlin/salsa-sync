@@ -1063,7 +1063,7 @@
     drawSession(a); drawSpread(a);
     const s = sessionOf(a), r = summarise(s), T = r.T, P = 60000 / s.bpm, basics = cutBasics(s);
     // Tempo: how long each half-basic took (first step after one pause to the first step after the next), as BPM.
-    // Filled dots are the 1 2 3 half, rings the 5 6 7 half (by the count the half started on), so a dancer who rushes
+    // Filled dots are the 123 half, rings the 567 half (by the count the half started on), so a dancer who rushes
     // one half and drags the other shows up even when their whole basic is the right length.
     const real = s.beats.filter(b => !b.countIn), countAt = t => real.findLast(b => b.t + s.audioDelayMs <= t + P / 2)?.count ?? 1;
     const starts = [];
@@ -1087,14 +1087,14 @@
         Array.from({ length: Math.floor(secs / every) + 1 }, (_, i) => i * every)
           .map(v => `<text x="${tx(v)}" y="123" text-anchor="middle">${v}</text>`).join("") +
         `<text x="182" y="136" text-anchor="middle">Time (seconds)</text>` +
-        `<text x="182" y="152" text-anchor="middle">● 1 2 3 half   ○ 5 6 7 half   - - - music</text>`;
+        `<text x="182" y="152" text-anchor="middle">● 123   ○ 567</text>`;
       const inBand = halves.filter(h => bpmTier(h.bpm) === "ok").length, musicHalf = 4 * P;
       const f = median(halves.filter(h => h.first).map(h => h.ms)), sec = median(halves.filter(h => !h.first).map(h => h.ms));
-      const say = (ms, name) => Math.abs(ms - musicHalf) / musicHalf <= 0.04 ? "" : `your ${name} half ${ms < musicHalf ? "rushes" : "drags"}`;
-      const diff = f && sec && Math.abs(f - sec) / musicHalf > 0.08 ? [say(f, "1 2 3"), say(sec, "5 6 7")].filter(Boolean).join(" and ") : "";
+      const say = (ms, name) => Math.abs(ms - musicHalf) / musicHalf <= 0.04 ? "" : `your ${name} is ${ms < musicHalf ? "rushing" : "dragging"}`;
+      const diff = f && sec && Math.abs(f - sec) / musicHalf > 0.08 ? [say(f, "123"), say(sec, "567")].filter(Boolean).join(" and ") : "";
       $("dTempoCap").innerHTML = (diff ? diff[0].toUpperCase() + diff.slice(1) : `${inBand} of ${halves.length} half-basics at the right speed`) +
         `<small>${diff ? `${inBand} of ${halves.length} half-basics at the right speed. ` : ""}` +
-        (f && sec ? `Your 1 2 3 half took ${(f / 1000).toFixed(2)} s and your 5 6 7 half ${(sec / 1000).toFixed(2)} s; the music gives each ${(musicHalf / 1000).toFixed(2)} s.` : `Music ${r.bpm} BPM.`) +
+        (f && sec ? `Your 123 took ${(f / 1000).toFixed(2)} s and your 567 ${(sec / 1000).toFixed(2)} s; the music gives each ${(musicHalf / 1000).toFixed(2)} s.` : `Music ${r.bpm} BPM.`) +
         ` Green band: ${r.bpm} ±${r.band} BPM.</small>`;
     } else { svg.innerHTML = ""; $("dTempoCap").innerHTML = `Not enough clean half-basics to measure<small>Each half needs three steps and a pause.</small>`; }
     // Pause: for every basic with 6 steps, the pause after 3 and the pause after 7 (up to the next basic's first step).
