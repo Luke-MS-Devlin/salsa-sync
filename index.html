@@ -185,7 +185,8 @@
     .dchart { width:100%; display:block; }
     hr.split { border:0; border-top:1px solid var(--line); margin:16px 0 12px; }
     .prow { display:grid; grid-template-columns:22px 1fr 1px 1fr; gap:10px; align-items:center; margin:5px 0; font-size:.72rem; color:var(--muted); }
-    .prow.head { font-weight:700; color:var(--soft); } .prow > b { text-align:right; } .pq { text-align:center; }
+    .prow.head { font-weight:700; color:var(--soft); } .prow > b { text-align:right; }
+    .prow.head > span, .pq { text-align:center; padding-right:10%; }   /* centred over the box and its number, not the whole column */
     .prow > hr { border:0; margin:-5px 0; height:calc(100% + 10px); background:var(--line); }   /* thin line between the 4th and 8th beat columns */
     .pslot { position:relative; height:16px; }
     .pslot::before { content:""; position:absolute; left:0; top:0; bottom:0; width:75%; border:1.5px dashed var(--ghost); border-radius:5px; box-sizing:border-box; }
