@@ -191,7 +191,7 @@
     .pslot::before { content:""; position:absolute; left:0; top:0; bottom:0; width:75%; border:1.5px dashed var(--ghost); border-radius:5px; box-sizing:border-box; }
     .pslot i { position:absolute; left:0; top:2px; bottom:2px; border-radius:3px; }
     .pslot i.ok { background:var(--good); } .pslot i.warn { background:var(--warn); } .pslot i.bad { background:var(--bad); }
-    .pslot em { position:absolute; right:0; top:0; font-style:normal; font-size:.7rem; color:var(--fg); line-height:16px; }
+    .pslot em { position:absolute; top:0; font-style:normal; font-size:.7rem; color:var(--fg); line-height:16px; }
     .gtitle { font-size:.78rem; font-weight:700; color:var(--soft); margin:4px 0 6px; }
     .dchart rect.b7 { opacity:.5; } .dchart .sw { stroke:none; }
     .dchart line { stroke:var(--line); } .dchart text { fill:var(--muted); font-size:10px; }
@@ -1135,7 +1135,7 @@
     const all = pauses.flat().filter(v => v != null);
     if (all.length) {
       const cell = v => v == null ? `<span class="pq">?</span>` :
-        `<div class="pslot"><i class="${pTier(v)}" style="width:${Math.min(100, v / 2 * 75)}%"></i><em>${v.toFixed(1)}</em></div>`;
+        `<div class="pslot"><i class="${pTier(v)}" style="width:${Math.min(88, v / 2 * 75)}%"></i><em style="left:calc(${Math.max(75, Math.min(88, v / 2 * 75))}% + 6px)">${v.toFixed(1)}</em></div>`;   // the number just past the box (or the bar, if longer)
       $("dPause").innerHTML = `<div class="prow head"><span></span><span>4th beat</span><hr><span>8th beat</span></div>` +
         pauses.map((pp, i) => `<div class="prow"><b>${i + 1}</b>${cell(pp?.[0])}<hr>${cell(pp?.[1])}</div>`).join("");
       const avg = k => median(pauses.filter(Boolean).map(pp => pp[k]));
