@@ -1108,7 +1108,7 @@
     tempoChart($("dBasic"), fulls, false);
     $("dBasicCap").innerHTML = !overall ? `Couldn't measure your basics<small>Each basic needs three steps, a pause, three steps and a pause.</small>`
       : `Your basics are ${overall}<small>The music's tempo of ${r.bpm} BPM gives a basic time of ${(8 * P / 1000).toFixed(2)}s. Your typical basic took ` +
-        `${(r.yoursMs / 1000).toFixed(2)}s, which is ${r.yourBpm} BPM.${fulls.length ? ` ${fulls.filter(f => bpmTier(f.bpm) === "ok").length} of ${fulls.length} basics had the correct tempo.` : ""}${overall === word.true ? " Good Job!" : ""}</small>`;
+        `${(r.yoursMs / 1000).toFixed(2)}s, which is ${r.yourBpm} BPM.${fulls.length ? ` ${fulls.filter(f => bpmTier(f.bpm) === "ok").length} of ${fulls.length} basics had the correct tempo.` : ""}${overall === word.true ? " Good Job!" : overall === word.fast ? " You should try to slow down next time." : " You should try to speed up next time."}</small>`;
     // 123 and 567: each half's typical time as BPM, judged with the same green band.
     tempoChart($("dTempo"), halves, true);
     const musicHalf = 4 * P, typ = first => median(halves.filter(h => h.first === first).map(h => h.ms));
