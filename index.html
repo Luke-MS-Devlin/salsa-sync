@@ -184,8 +184,9 @@
     #analysisBody .cap small { display:block; font-size:.82rem; font-weight:400; color:var(--soft); margin-top:3px; }
     .dchart { width:100%; display:block; }
     hr.split { border:0; border-top:1px solid var(--line); margin:16px 0 12px; }
-    .prow { display:grid; grid-template-columns:22px 1fr 1fr; gap:10px; align-items:center; margin:5px 0; font-size:.72rem; color:var(--muted); }
+    .prow { display:grid; grid-template-columns:22px 1fr 1px 1fr; gap:10px; align-items:center; margin:5px 0; font-size:.72rem; color:var(--muted); }
     .prow.head { font-weight:700; color:var(--soft); } .prow > b { text-align:right; } .pq { text-align:center; }
+    .prow > hr { border:0; margin:-5px 0; height:calc(100% + 10px); background:var(--line); }   /* thin line between the 4th and 8th beat columns */
     .pslot { position:relative; height:16px; }
     .pslot::before { content:""; position:absolute; left:0; top:0; bottom:0; width:75%; border:1.5px dashed var(--ghost); border-radius:5px; box-sizing:border-box; }
     .pslot i { position:absolute; left:0; top:2px; bottom:2px; border-radius:3px; }
@@ -1135,8 +1136,8 @@
     if (all.length) {
       const cell = v => v == null ? `<span class="pq">?</span>` :
         `<div class="pslot"><i class="${pTier(v)}" style="width:${Math.min(100, v / 2 * 75)}%"></i><em>${v.toFixed(1)}</em></div>`;
-      $("dPause").innerHTML = `<div class="prow head"><span></span><span>4th beat</span><span>8th beat</span></div>` +
-        pauses.map((pp, i) => `<div class="prow"><b>${i + 1}</b>${cell(pp?.[0])}${cell(pp?.[1])}</div>`).join("");
+      $("dPause").innerHTML = `<div class="prow head"><span></span><span>4th beat</span><hr><span>8th beat</span></div>` +
+        pauses.map((pp, i) => `<div class="prow"><b>${i + 1}</b>${cell(pp?.[0])}<hr>${cell(pp?.[1])}</div>`).join("");
       const avg = k => median(pauses.filter(Boolean).map(pp => pp[k]));
       const word = v => v == null ? null : Math.abs(v - 2) <= 0.25 ? "just right" : v < 2 ? "too short" : "too long";
       const w4 = word(avg(0)), w8 = word(avg(1));
